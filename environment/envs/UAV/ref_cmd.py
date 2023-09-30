@@ -47,7 +47,7 @@ def generate_uncertainty(time: float, is_ideal: bool = False) -> np.ndarray:
     """
     :param time:        time
     :param is_ideal:    ideal or not
-    :return:            Fdx, Fdy, Fdz, dp, dq, dr
+    :return:            Fdx, Fdy, Fdz
     """
     if is_ideal:
         return np.array([0, 0, 0]).astype(float)
