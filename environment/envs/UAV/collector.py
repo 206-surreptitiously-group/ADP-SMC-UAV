@@ -15,17 +15,19 @@ class data_collector:
         self.state = np.zeros((N, 12)).astype(float)
         self.index = 0
         self.name = ['uav_state.csv', 'ref_cmd.csv', 'control.csv', 'observe.csv']
+        self.N = N
 
     def record(self, data: dict):
-        self.t[self.index][0] = data['time']
-        self.control[self.index] = data['control']
-        self.ref_angle[self.index] = data['ref_angle']
-        self.ref_pos[self.index] = data['ref_pos']
-        self.ref_vel[self.index] = data['ref_vel']
-        self.d_out[self.index] = data['d_out']
-        self.d_out_obs[self.index] = data['d_out_obs']
-        self.state[self.index] = data['state']
-        self.index += 1
+        if self.index < self.N:
+            self.t[self.index][0] = data['time']
+            self.control[self.index] = data['control']
+            self.ref_angle[self.index] = data['ref_angle']
+            self.ref_pos[self.index] = data['ref_pos']
+            self.ref_vel[self.index] = data['ref_vel']
+            self.d_out[self.index] = data['d_out']
+            self.d_out_obs[self.index] = data['d_out_obs']
+            self.state[self.index] = data['state']
+            self.index += 1
 
     def package2file(self, path: str):
         pd.DataFrame(np.hstack((self.t, self.state)),

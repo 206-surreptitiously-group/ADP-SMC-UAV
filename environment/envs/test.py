@@ -2,7 +2,6 @@ import datetime
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 from UAV.FNTSMC import fntsmc_param
 from UAV.ref_cmd import *
