@@ -1,5 +1,5 @@
 import numpy as np
-
+from common.common_func import *
 
 class uav_param:
     def __init__(self):
@@ -18,10 +18,13 @@ class uav_param:
         self.pqr0: np.ndarray = np.array([0, 0, 0])
         self.dt = 0.01
         self.time_max = 30  # 每回合最大时间
+        self.pos_zone = np.atleast_2d([[-5, 5],[-5, 5],[0, 3]])      # 定义飞行区域，不可以出界
+        self.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 
 
 class UAV:
     def __init__(self, param: uav_param):
+        self.param = param
         self.m = param.m
         self.g = param.g
         self.J = param.J
@@ -52,6 +55,10 @@ class UAV:
 
         self.throttle = self.m * self.g  # 油门
         self.torque = np.array([0., 0., 0.]).astype(float)  # 转矩
+        self.terminal_flag = 0
+
+        self.pos_zone = param.pos_zone
+        self.att_zone = param.att_zone
 
     def ode(self, xx: np.ndarray, dis: np.ndarray):
         """
@@ -132,6 +139,88 @@ class UAV:
 
     def set_state(self, xx: np.ndarray):
         [self.x, self.y, self.z, self.vx, self.vy, self.vz, self.phi, self.theta, self.psi, self.p, self.q, self.r] = xx[:]
+
+    def is_pos_out(self) -> bool:
+        _flag = False
+        if(self.x < self.pos_zone[0][0]) or (self.x > self.pos_zone[0][1]):
+            print('XOUT!!!!!')
+            _flag = True
+        if (self.x < self.pos_zone[1][0]) or (self.x > self.pos_zone[1][1]):
+            print('YOUT!!!!!')
+            _flag = True
+        if (self.x < self.pos_zone[2][0]) or (self.x > self.pos_zone[2][1]):
+            print('ZOUT!!!!!')
+            _flag = True
+        return _flag
+
+    def is_att_out(self) -> bool:
+        _flag = False
+        if (self.phi < self.att_zone[0][0]) or (self.phi > self.att_zone[0][1]):
+            print('Phi OUT!!!!!')
+            _flag = True
+        if (self.theta < self.att_zone[1][0]) or (self.theta > self.att_zone[1][1]):
+            print('Theta OUT!!!!!')
+            _flag = True
+        if (self.psi < self.att_zone[2][0]) or (self.psi > self.att_zone[2][1]):
+            print('Yaw OUT!!!!!')
+            _flag = True
+        return _flag
+
+    def is_episode_Terminal(self) -> tuple:
+        _terminal = False
+        if self.time > self.time_max - self.dt / 2:
+            print('Time out...')
+            self.terminal_flag = 1
+            _terminal = True
+        if self.is_pos_out():
+            print('Position out...')
+            self.terminal_flag = 2
+            _terminal = True
+        if self.is_att_out():
+            print('Attitude out...')
+            self.terminal_flag = 3
+            _terminal = True
+        return _terminal, self.terminal_flag
+
+    def reset(self):
+        self.m = self.param.m
+        self.g = self.param.g
+        self.J = self.param.J
+        self.d = self.param.d
+        self.CT = self.param.CT
+        self.CM = self.param.CM
+        self.J0 = self.param.J0
+        self.kr = self.param.kr
+        self.kt = self.param.kt
+
+        self.x = self.param.pos0[0]
+        self.y = self.param.pos0[1]
+        self.z = self.param.pos0[2]
+        self.vx = self.param.vel0[0]
+        self.vy = self.param.vel0[1]
+        self.vz = self.param.vel0[2]
+        self.phi = self.param.angle0[0]
+        self.theta = self.param.angle0[1]
+        self.psi = self.param.angle0[2]
+        self.p = self.param.pqr0[0]
+        self.q = self.param.pqr0[1]
+        self.r = self.param.pqr0[2]
+
+        self.dt = self.param.dt
+        self.n = 0  # 记录走过的拍数
+        self.time = 0.  # 当前时间
+        self.time_max = self.param.time_max
+
+        self.throttle = self.m * self.g  # 油门
+        self.torque = np.array([0., 0., 0.]).astype(float)  # 转矩
+        self.terminal_flag = 0
+
+        self.pos_zone = self.param.pos_zone
+        self.att_zone = self.param.att_zone
+
+    def reset_with_param(self, new_param: uav_param):
+        self.param = new_param
+        self.reset()
 
     def f1(self) -> np.ndarray:
         """

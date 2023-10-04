@@ -5,17 +5,17 @@ import matplotlib.pyplot as plt
 
 class data_collector:
     def __init__(self, N: int):
-        self.t = np.zeros((N, 1)).astype(float)
-        self.control = np.zeros((N, 4)).astype(float)
-        self.ref_angle = np.zeros((N, 3)).astype(float)
-        self.ref_pos = np.zeros((N, 3)).astype(float)
-        self.ref_vel = np.zeros((N, 3)).astype(float)
-        self.d_out = np.zeros((N, 3)).astype(float)
-        self.d_out_obs = np.zeros((N, 3)).astype(float)
-        self.state = np.zeros((N, 12)).astype(float)
+        self.N = N
+        self.t = np.zeros((self.N, 1)).astype(float)
+        self.control = np.zeros((self.N, 4)).astype(float)
+        self.ref_angle = np.zeros((self.N, 3)).astype(float)
+        self.ref_pos = np.zeros((self.N, 3)).astype(float)
+        self.ref_vel = np.zeros((self.N, 3)).astype(float)
+        self.d_out = np.zeros((self.N, 3)).astype(float)
+        self.d_out_obs = np.zeros((self.N, 3)).astype(float)
+        self.state = np.zeros((self.N, 12)).astype(float)
         self.index = 0
         self.name = ['uav_state.csv', 'ref_cmd.csv', 'control.csv', 'observe.csv']
-        self.N = N
 
     def record(self, data: dict):
         if self.index < self.N:
@@ -28,6 +28,18 @@ class data_collector:
             self.d_out_obs[self.index] = data['d_out_obs']
             self.state[self.index] = data['state']
             self.index += 1
+
+    def reset(self, N: int):
+        self.N = N
+        self.t = np.zeros((self.N, 1)).astype(float)
+        self.control = np.zeros((self.N, 4)).astype(float)
+        self.ref_angle = np.zeros((self.N, 3)).astype(float)
+        self.ref_pos = np.zeros((self.N, 3)).astype(float)
+        self.ref_vel = np.zeros((self.N, 3)).astype(float)
+        self.d_out = np.zeros((self.N, 3)).astype(float)
+        self.d_out_obs = np.zeros((self.N, 3)).astype(float)
+        self.state = np.zeros((self.N, 12)).astype(float)
+        self.index = 0
 
     def package2file(self, path: str):
         pd.DataFrame(np.hstack((self.t, self.state)),
@@ -146,6 +158,32 @@ class data_collector:
         plt.yticks(np.arange(-100, 100, 10))
         plt.xlabel('time(s)')
         plt.title('yaw-psi')
+
+    def plot_pqr(self):
+        plt.figure()
+        plt.subplot(1, 3, 1)
+        plt.plot(self.t, self.state[:, 9] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        # plt.ylim((-90, 90))
+        # plt.yticks(np.arange(-90, 90, 10))
+        plt.xlabel('time(s)')
+        plt.title('p')
+
+        plt.subplot(1, 3, 2)
+        plt.plot(self.t, self.state[:, 10] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        # plt.ylim((-90, 90))
+        # plt.yticks(np.arange(-90, 90, 10))
+        plt.xlabel('time(s)')
+        plt.title('q')
+
+        plt.subplot(1, 3, 3)
+        plt.plot(self.t, self.state[:, 11] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        # plt.ylim((-100, 100))
+        # plt.yticks(np.arange(-100, 100, 10))
+        plt.xlabel('time(s)')
+        plt.title('r')
 
     def plot_throttle(self):
         plt.figure()
