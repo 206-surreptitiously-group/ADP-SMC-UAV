@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # ref_bias_phase = np.array([np.pi / 2, 0, 0, np.pi / 2])
     # ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = pos_ctrl.generate_random_circle(yaw_fixed=False)
 
-    NUM_OF_SIMULATION = 1
+    NUM_OF_SIMULATION = 5
     cnt = 0
 
     # '''3. Control'''
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
         if cnt % 1 == 0:
             print('Current:', cnt)
-        writer = cv.VideoWriter('record.mp4', cv.VideoWriter_fourcc(*'mp4v'), 300, (pos_ctrl.width, pos_ctrl.height), True)
+        writer = cv.VideoWriter('record' + str(cnt) + '.mp4', cv.VideoWriter_fourcc(*'mp4v'), 120, (pos_ctrl.width, pos_ctrl.height), True)
 
         while pos_ctrl.time < pos_ctrl.time_max - DT / 2:
             # if pos_ctrl.n % 1000 == 0:
@@ -143,7 +143,8 @@ if __name__ == '__main__':
             pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().Green])
             pos_ctrl.draw_error(pos_ctrl.uav_pos(), ref[0:3])
             pos_ctrl.show_image(False)
-            writer.write(pos_ctrl.image)
+            if pos_ctrl.n % 10 == 0:
+                writer.write(pos_ctrl.image)
 
         writer.release()
         # print(cnt, '  Finish...')
