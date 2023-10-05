@@ -91,10 +91,26 @@ class uav_pos_ctrl(UAV):
         self.collector.record(data_block)
         self.rk44(action=action, dis=self.dis, n=1, att_only=False)
 
+    def generate_ref_pos_trajectory(self, _amplitude:np.ndarray, _period:np.ndarray, _bias_a:np.ndarray, _bias_phase:np.ndarray):
+        """
+        @param _amplitude:
+        @param _period:
+        @param _bias_a:
+        @param _bias_phase:
+        @return:
+        """
+        t = np.linspace(0, self.time_max, int(self.time_max / self.dt) + 1)
+        rx = _bias_a[0] + _amplitude[0] * np.sin(2 * np.pi / _period[0] * t + _bias_phase[0])
+        ry = _bias_a[1] + _amplitude[1] * np.sin(2 * np.pi / _period[1] * t + _bias_phase[1])
+        rz = _bias_a[2] + _amplitude[2] * np.sin(2 * np.pi / _period[2] * t + _bias_phase[2])
+        # rpsi = _bias_a[3] + _amplitude[3] * np.sin(2 * np.pi / _period[3] * t + _bias_phase[3])
+        return np.vstack((rx, ry, rz)).T
+
+
     @staticmethod
     def generate_random_circle(yaw_fixed: bool = False):
-        rxy = np.random.uniform(low=0, high=2.5, size=2)      # 随机生成 xy 方向振幅
-        rz = np.random.uniform(low=0, high=1.0)               # 随机生成 z  方向振幅
+        rxy = np.random.uniform(low=0, high=3, size=2)      # 随机生成 xy 方向振幅
+        rz = np.random.uniform(low=0, high=1.5)               # 随机生成 z  方向振幅
         rpsi = np.random.uniform(low=0, high=np.pi / 2)
 
         Txy = np.random.uniform(low=5, high=10, size=2)       # 随机生成 xy 方向周期
@@ -108,7 +124,7 @@ class uav_pos_ctrl(UAV):
 
         _amplitude = np.array([rxy[0], rxy[1], rz, rpsi])  # x y z psi
         _period = np.array([Txy[0], Txy[1], Tz, Tpsi])
-        _bias_a = np.array([0, 0, 1, 0])                    # 偏置不变
+        _bias_a = np.array([0, 0, 1.5, 0])                    # 偏置不变
         _bias_phase = phase_xyzpsi
 
         return _amplitude, _period, _bias_a, _bias_phase
@@ -118,7 +134,7 @@ class uav_pos_ctrl(UAV):
         y = np.random.uniform(low=self.pos_zone[1][0], high=self.pos_zone[1][1], size=2)
         z = np.random.uniform(low=self.pos_zone[2][0], high=self.pos_zone[2][1], size=2)
         psi = np.random.uniform(low=self.att_zone[2][0], high=self.att_zone[2][1], size=2)
-        st = np.vstack((x,y,z, psi))
+        st = np.vstack((x, y, z, psi))
         start = st[:, 0]
         target = st[:, 1]
         return start, target

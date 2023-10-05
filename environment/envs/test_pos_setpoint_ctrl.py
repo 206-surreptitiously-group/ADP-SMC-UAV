@@ -7,6 +7,7 @@ from UAV.FNTSMC import fntsmc_param
 from UAV.ref_cmd import *
 from UAV.uav import uav_param
 from UAV.uav_pos_ctrl import uav_pos_ctrl
+from environment.Color import Color
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../')
 
@@ -30,6 +31,8 @@ uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
 uav_param.time_max = 60
+uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
+uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
 
 '''Parameter list of the attitude controller'''
@@ -85,6 +88,8 @@ if __name__ == '__main__':
         start, ref_bias_a = pos_ctrl.generate_random_start_target()
         ref_bias_phase = np.zeros(4)
 
+        ref, _, _, _ = ref_uav(pos_ctrl.time, ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)  # xd yd zd psid
+
         phi_d = phi_d_old = 0.
         theta_d = theta_d_old = 0.
         dot_phi_d = (phi_d - phi_d_old) / pos_ctrl.dt
@@ -97,10 +102,11 @@ if __name__ == '__main__':
         pos_ctrl.uav_reset_with_new_param(new_uav_param=uav_param)      # 无人机初始参数，只变了初始位置
         pos_ctrl.controller_reset_with_new_param(new_att_param=att_ctrl_param, new_pos_param=pos_ctrl_param)    # 控制器参数，一般不变
         pos_ctrl.collector_reset(round(uav_param.time_max / uav_param.dt))
+        pos_ctrl.draw_3d_points_projection(np.atleast_2d([ref[0:3]]), [Color().Green])
+        pos_ctrl.draw_init_image()
+        pos_ctrl.show_image(True)
 
-        # print(pos_ctrl.collector.N)
-
-        if cnt % 100 == 0:
+        if cnt % 1 == 0:
             print('Current:', cnt)
 
         while pos_ctrl.time < pos_ctrl.time_max - DT / 2:
@@ -127,6 +133,11 @@ if __name__ == '__main__':
             '''3.4 update state'''
             action_4_uav = np.array([throttle, torque[0], torque[1], torque[2]])
             pos_ctrl.update(action=action_4_uav)
+
+            pos_ctrl.image = pos_ctrl.image_copy.copy()
+            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos()]), [Color().Red])
+            pos_ctrl.draw_error(pos_ctrl.uav_pos(), ref[0:3])
+            pos_ctrl.show_image(False)
         cnt += 1
         SAVE = False
         if SAVE:
@@ -135,14 +146,14 @@ if __name__ == '__main__':
                         datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '/')
             os.mkdir(new_path)
             pos_ctrl.collector.package2file(path=new_path)
-        # plt.ion()
-        # pos_ctrl.collector.plot_att()
-        # pos_ctrl.collector.plot_pqr()
-        # pos_ctrl.collector.plot_torque()
-        pos_ctrl.collector.plot_pos()
-        pos_ctrl.collector.plot_vel()
-        # pos_ctrl.collector.plot_throttle()
-        # pos_ctrl.collector.plot_outer_obs()
-        # plt.pause(2)
-        # plt.ioff()
-        plt.show()
+        # # plt.ion()
+        # # pos_ctrl.collector.plot_att()
+        # # pos_ctrl.collector.plot_pqr()
+        # # pos_ctrl.collector.plot_torque()
+        # pos_ctrl.collector.plot_pos()
+        # pos_ctrl.collector.plot_vel()
+        # # pos_ctrl.collector.plot_throttle()
+        # # pos_ctrl.collector.plot_outer_obs()
+        # # plt.pause(2)
+        # # plt.ioff()
+        # plt.show()
