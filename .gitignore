@@ -1,0 +1,5 @@
+**/__pycache__
+datasave/*
+.idea/
+*.mp4
+*.avi
