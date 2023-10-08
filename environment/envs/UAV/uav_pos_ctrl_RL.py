@@ -110,3 +110,9 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.is_Terminal()
 		self.next_state = self.state_norm()
 		self.get_reward()
+
+	def get_param_from_actor(self, action_from_actor: np.ndarray):
+		self.pos_ctrl.k1[:] = action_from_actor[0: 3]
+		self.pos_ctrl.k2[:] = action_from_actor[3: 6]
+		self.pos_ctrl.gamma = action_from_actor[6] * np.ones(3)
+		self.pos_ctrl.lmd = action_from_actor[7] * np.ones(3)

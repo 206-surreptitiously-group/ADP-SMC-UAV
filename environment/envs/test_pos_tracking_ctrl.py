@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 
 import datetime
-import os, sys
-import matplotlib.pyplot as plt
-import cv2 as cv
+import os
+import sys
 
 from UAV.FNTSMC import fntsmc_param
 from UAV.ref_cmd import *
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     while cnt < NUM_OF_SIMULATION:
         '''生成新的参考轨迹的信息'''
         ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = pos_ctrl.generate_random_circle(yaw_fixed=False)
-        ref, _, _, _ = ref_uav(pos_ctrl.time, ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
+        ref, _, _, _ = ref_uav(0., ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
 
         '''初始化一些控制中间变量'''
         phi_d = phi_d_old = 0.
@@ -107,12 +106,12 @@ if __name__ == '__main__':
         ref_traj = pos_ctrl.generate_ref_pos_trajectory(ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
         pos_ctrl.draw_3d_trajectory_projection(ref_traj)
         pos_ctrl.draw_init_image()
-        pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos()]), [Color().Red])
+        pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
         pos_ctrl.show_image(True)
 
         if cnt % 1 == 0:
             print('Current:', cnt)
-        writer = cv.VideoWriter('record' + str(cnt) + '.mp4', cv.VideoWriter_fourcc(*'mp4v'), 120, (pos_ctrl.width, pos_ctrl.height), True)
+        # writer = cv.VideoWriter('record' + str(cnt) + '.mp4', cv.VideoWriter_fourcc(*'mp4v'), 120, (pos_ctrl.width, pos_ctrl.height), True)
 
         while pos_ctrl.time < pos_ctrl.time_max - DT / 2:
             # if pos_ctrl.n % 1000 == 0:
@@ -140,13 +139,13 @@ if __name__ == '__main__':
             pos_ctrl.update(action=action_4_uav)
 
             pos_ctrl.image = pos_ctrl.image_copy.copy()
-            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().Green])
+            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
             pos_ctrl.draw_error(pos_ctrl.uav_pos(), ref[0:3])
             pos_ctrl.show_image(False)
-            if pos_ctrl.n % 10 == 0:
-                writer.write(pos_ctrl.image)
+            # if pos_ctrl.n % 10 == 0:
+            #     writer.write(pos_ctrl.image)
 
-        writer.release()
+        # writer.release()
         # print(cnt, '  Finish...')
         rise = pos_ctrl.RISE()
         # print('RISE calculation:')

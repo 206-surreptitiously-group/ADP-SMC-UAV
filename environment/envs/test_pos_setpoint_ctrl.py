@@ -1,7 +1,6 @@
 import datetime
-import os, sys
-import matplotlib.pyplot as plt
-import numpy as np
+import os
+import sys
 
 from UAV.FNTSMC import fntsmc_param
 from UAV.ref_cmd import *
@@ -102,8 +101,8 @@ if __name__ == '__main__':
         pos_ctrl.uav_reset_with_new_param(new_uav_param=uav_param)      # 无人机初始参数，只变了初始位置
         pos_ctrl.controller_reset_with_new_param(new_att_param=att_ctrl_param, new_pos_param=pos_ctrl_param)    # 控制器参数，一般不变
         pos_ctrl.collector_reset(round(uav_param.time_max / uav_param.dt))
-        pos_ctrl.draw_3d_points_projection(np.atleast_2d([ref[0:3]]), [Color().Green])
         pos_ctrl.draw_init_image()
+        pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0:3]]), [Color().Red, Color().DarkGreen])
         pos_ctrl.show_image(True)
 
         if cnt % 1 == 0:
@@ -135,7 +134,7 @@ if __name__ == '__main__':
             pos_ctrl.update(action=action_4_uav)
 
             pos_ctrl.image = pos_ctrl.image_copy.copy()
-            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos()]), [Color().Red])
+            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
             pos_ctrl.draw_error(pos_ctrl.uav_pos(), ref[0:3])
             pos_ctrl.show_image(False)
         cnt += 1

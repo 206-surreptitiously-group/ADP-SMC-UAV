@@ -106,7 +106,6 @@ class uav_pos_ctrl(UAV):
         # rpsi = _bias_a[3] + _amplitude[3] * np.sin(2 * np.pi / _period[3] * t + _bias_phase[3])
         return np.vstack((rx, ry, rz)).T
 
-
     @staticmethod
     def generate_random_circle(yaw_fixed: bool = False):
         rxy = np.random.uniform(low=0, high=3, size=2)      # 随机生成 xy 方向振幅

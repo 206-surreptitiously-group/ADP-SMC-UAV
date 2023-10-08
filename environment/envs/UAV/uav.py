@@ -415,10 +415,10 @@ class UAV:
         if (self.x < self.x_min) or (self.x > self.x_max):
             print('XOUT!!!!!')
             _flag = True
-        if (self.x < self.y_min) or (self.x > self.y_max):
+        if (self.y < self.y_min) or (self.y > self.y_max):
             print('YOUT!!!!!')
             _flag = True
-        if (self.x < self.z_min) or (self.x > self.z_max):
+        if (self.z < self.z_min) or (self.z > self.z_max):
             print('ZOUT!!!!!')
             _flag = True
         return _flag
@@ -442,10 +442,10 @@ class UAV:
             print('Time out...')
             self.terminal_flag = 1
             _terminal = True
-        if self.is_pos_out():
-            print('Position out...')
-            self.terminal_flag = 2
-            _terminal = True
+        # if self.is_pos_out():
+        #     print('Position out...')
+        #     self.terminal_flag = 2
+        #     _terminal = True
         if self.is_att_out():
             print('Attitude out...')
             self.terminal_flag = 3
