@@ -3,6 +3,8 @@ from algorithm.rl_base.rl_base import rl_base
 from uav_pos_ctrl import uav_pos_ctrl, fntsmc_param
 import math
 import numpy as np
+from ref_cmd import *
+from environment.Color import Color
 
 
 class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
@@ -10,7 +12,6 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		rl_base.__init__(self)
 		uav_pos_ctrl.__init__(self, _uav_param, _uav_att_param, _uav_pos_param)
 
-		self.uav_param = uav_param		# 用于存储 uav 参数和初始化无人机
 		self.staticGain = 1.0
 
 		'''state limitation'''
@@ -116,3 +117,6 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.pos_ctrl.k2[:] = action_from_actor[3: 6]
 		self.pos_ctrl.gamma = action_from_actor[6] * np.ones(3)
 		self.pos_ctrl.lmd = action_from_actor[7] * np.ones(3)
+
+	def reset_random(self):
+		self.reset_uav_random()

@@ -185,7 +185,7 @@ if __name__ == '__main__':
 		# ])
 		'''重新加载Policy网络结构，这是必须的操作'''
 		agent = PPO(env=env,
-					actor_lr=3e-4,
+					actor_lr=1e-4,
 					critic_lr=1e-3,
 					gamma=0.99,
 					K_epochs=50,
@@ -208,25 +208,7 @@ if __name__ == '__main__':
 		index = 0
 		while timestep <= max_training_timestep:
 			'''这整个是一个 episode 的初始化过程'''
-			ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = env.generate_random_circle(yaw_fixed=False)
-			ref, _, _, _ = ref_uav(0., ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
-
-			phi_d = phi_d_old = 0.
-			theta_d = theta_d_old = 0.
-			dot_phi_d = (phi_d - phi_d_old) / env.dt
-			dot_theta_d = (theta_d - theta_d_old) / env.dt
-			throttle = env.m * env.g
-
-			uav_param.time_max = 30
-			uav_param.pos0 = env.set_random_init_pos(pos0=ref[0:3], r=0.3 * np.ones(3))
-
-			env.uav_reset_with_new_param(new_uav_param=uav_param)  # 无人机初始参数，只变了初始位置
-			env.controller_reset_with_new_param(new_att_param=att_ctrl_param, new_pos_param=pos_ctrl_param)  # 控制器参数，一般不变
-			env.collector_reset(round(uav_param.time_max / uav_param.dt))
-			ref_traj = env.generate_ref_pos_trajectory(ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
-			env.draw_3d_trajectory_projection(ref_traj)
-			env.draw_init_image()
-			env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
+			env.reset_random()
 			env.show_image(True)
 			'''这整个是一个 episode 的初始化过程'''
 
@@ -236,32 +218,14 @@ if __name__ == '__main__':
 				action_from_actor = action_from_actor.numpy()	# 这里的 action 实际上就是真是的参数，需要把它们复制给控制器
 				env.get_param_from_actor(action_from_actor)		# 将控制器参数更新
 
-				'''控制'''
-				'''3.1 generate '''
-				ref, dot_ref, dot2_ref, _ = ref_uav(env.time, ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)  # xd yd zd psid
-				uncertainty = generate_uncertainty(time=env.time, is_ideal=True)
-				obs = np.zeros(3)
+				action_4_uav = env.generate_action_4_uav()
 
-				'''3.2 outer-loop control'''
-				phi_d_old = phi_d
-				theta_d_old = theta_d
-				phi_d, theta_d, throttle = env.pos_control(ref[0:3], dot_ref[0:3], dot2_ref[0:3], uncertainty, obs)
-				dot_phi_d = (phi_d - phi_d_old) / env.dt
-				dot_theta_d = (theta_d - theta_d_old) / env.dt
-
-				'''3.3 inner-loop control'''
-				rho_d = np.array([phi_d, theta_d, ref[3]])
-				dot_rho_d = np.array([dot_phi_d, dot_theta_d, dot_ref[3]])
-				torque = env.att_control(rho_d, dot_rho_d, np.zeros(3), att_only=False)
-				action_4_uav = [throttle, torque[0], torque[1], torque[2]]
-
-				'''3.4 step update'''
 				env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
 
 				if agent.episode % 50 == 0:		# 50 个回合测试一下看看
 					env.image = env.image_copy.copy()
-					env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
-					env.draw_error(env.uav_pos(), ref[0:3])
+					env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
+					env.draw_error(env.uav_pos(), env.pos_ref)
 					env.show_image(False)
 				'''控制'''
 

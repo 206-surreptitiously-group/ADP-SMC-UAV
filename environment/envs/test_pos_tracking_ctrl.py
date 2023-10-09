@@ -65,99 +65,42 @@ pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
 
 if __name__ == '__main__':
-    '''1. Define a controller'''
     pos_ctrl = uav_pos_ctrl(uav_param, att_ctrl_param, pos_ctrl_param)
-    # quad_vis.reset()
-    # pos_ctrl.uav_reset()
-    # pos_ctrl.controller_reset()
-    # pos_ctrl.collector_reset()
-
-    '''2. Define parameters for signal generator'''
-    # ref_amplitude = np.array([2, 2.5, 0.5, deg2rad(0)])  # x y z psi
-    # ref_period = np.array([5, 10, 10, 4])
-    # ref_bias_a = np.array([0, 0, 1, 0])
-    # ref_bias_phase = np.array([np.pi / 2, 0, 0, np.pi / 2])
-    # ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = pos_ctrl.generate_random_circle(yaw_fixed=False)
 
     NUM_OF_SIMULATION = 5
     cnt = 0
 
-    # '''3. Control'''
     while cnt < NUM_OF_SIMULATION:
         '''生成新的参考轨迹的信息'''
-        ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = pos_ctrl.generate_random_circle(yaw_fixed=False)
-        ref, _, _, _ = ref_uav(0., ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
-
-        '''初始化一些控制中间变量'''
-        phi_d = phi_d_old = 0.
-        theta_d = theta_d_old = 0.
-        dot_phi_d = (phi_d - phi_d_old) / pos_ctrl.dt
-        dot_theta_d = (theta_d - theta_d_old) / pos_ctrl.dt
-        throttle = pos_ctrl.m * pos_ctrl.g
-
-        '''初始化 uav_param'''
-        uav_param.time_max = 30
-        uav_param.pos0 = pos_ctrl.set_random_init_pos(pos0=ref[0:3], r=0.3*np.ones(3))
-
-        '''初始化控制器 + 图形界面'''
-        pos_ctrl.uav_reset_with_new_param(new_uav_param=uav_param)  # 无人机初始参数，只变了初始位置
-        pos_ctrl.controller_reset_with_new_param(new_att_param=att_ctrl_param, new_pos_param=pos_ctrl_param)  # 控制器参数，一般不变
-        pos_ctrl.collector_reset(round(uav_param.time_max / uav_param.dt))
-        ref_traj = pos_ctrl.generate_ref_pos_trajectory(ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
-        pos_ctrl.draw_3d_trajectory_projection(ref_traj)
-        pos_ctrl.draw_init_image()
-        pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
+        pos_ctrl.reset_uav_random()
         pos_ctrl.show_image(True)
 
         if cnt % 1 == 0:
             print('Current:', cnt)
-        # writer = cv.VideoWriter('record' + str(cnt) + '.mp4', cv.VideoWriter_fourcc(*'mp4v'), 120, (pos_ctrl.width, pos_ctrl.height), True)
 
         while pos_ctrl.time < pos_ctrl.time_max - DT / 2:
             # if pos_ctrl.n % 1000 == 0:
             #     print('time: ', pos_ctrl.n * pos_ctrl.dt)
 
-            '''3.1 generate '''
-            ref, dot_ref, dot2_ref, _ = ref_uav(pos_ctrl.time, ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)  # xd yd zd psid
-            uncertainty = generate_uncertainty(time=pos_ctrl.time, is_ideal=True)
-            obs = np.zeros(3)
-
-            '''3.2 outer-loop control'''
-            phi_d_old = phi_d
-            theta_d_old = theta_d
-            phi_d, theta_d, throttle = pos_ctrl.pos_control(ref[0:3], dot_ref[0:3], dot2_ref[0:3], uncertainty, obs)
-            dot_phi_d = (phi_d - phi_d_old) / pos_ctrl.dt
-            dot_theta_d = (theta_d - theta_d_old) / pos_ctrl.dt
-
-            '''3.3 inner-loop control'''
-            rho_d = np.array([phi_d, theta_d, ref[3]])
-            dot_rho_d = np.array([dot_phi_d, dot_theta_d, dot_ref[3]])
-            torque = pos_ctrl.att_control(rho_d, dot_rho_d, np.zeros(3), att_only=False)
-
-            '''3.4 update state'''
-            action_4_uav = np.array([throttle, torque[0], torque[1], torque[2]])
-            pos_ctrl.update(action=action_4_uav)
+            action_4_uav = pos_ctrl.generate_action_4_uav()
+            pos_ctrl.update(action=np.array(action_4_uav))
 
             pos_ctrl.image = pos_ctrl.image_copy.copy()
-            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), ref[0: 3]]), [Color().Red, Color().DarkGreen])
-            pos_ctrl.draw_error(pos_ctrl.uav_pos(), ref[0:3])
+            pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), pos_ctrl.pos_ref]), [Color().Red, Color().DarkGreen])
+            pos_ctrl.draw_error(pos_ctrl.uav_pos(), pos_ctrl.pos_ref)
             pos_ctrl.show_image(False)
-            # if pos_ctrl.n % 10 == 0:
-            #     writer.write(pos_ctrl.image)
 
-        # writer.release()
-        # print(cnt, '  Finish...')
         rise = pos_ctrl.RISE()
         # print('RISE calculation:')
         # print('  x: %.2f,  y: %.2f,  z: %.2f' % (rise[0], rise[1], rise[2]))
-        if max(rise) > 0.03:
-            print('WARNING......')
-            _str = (str(cnt) + ',' + '[%.2f, %.2f, %.2f]' % (rise[0], rise[1], rise[2]) + '\n' +
-                    '  amplitude: [%.2f, %.2f, %.2f, %.2f]' % (ref_amplitude[0], ref_amplitude[1], ref_amplitude[2], ref_amplitude[3]) + '\n' +
-                    '  period: [%.2f, %.2f, %.2f, %.2f]' % (ref_period[0], ref_period[1], ref_period[2], ref_period[3]) + '\n' +
-                    '  bias_a: [%.2f, %.2f, %.2f, %.2f]' % (ref_bias_a[0], ref_bias_a[1], ref_bias_a[2], ref_bias_a[3]) + '\n' +
-                    '  bias_phase: [%.2f, %.2f, %.2f, %.2f]' % (ref_bias_phase[0], ref_bias_phase[1], ref_bias_phase[2], ref_bias_phase[3]) + '\n\n')
-            print(_str)
+        # if max(rise) > 0.03:
+        #     print('WARNING......')
+        #     _str = (str(cnt) + ',' + '[%.2f, %.2f, %.2f]' % (rise[0], rise[1], rise[2]) + '\n' +
+        #             '  amplitude: [%.2f, %.2f, %.2f, %.2f]' % (ref_amplitude[0], ref_amplitude[1], ref_amplitude[2], ref_amplitude[3]) + '\n' +
+        #             '  period: [%.2f, %.2f, %.2f, %.2f]' % (ref_period[0], ref_period[1], ref_period[2], ref_period[3]) + '\n' +
+        #             '  bias_a: [%.2f, %.2f, %.2f, %.2f]' % (ref_bias_a[0], ref_bias_a[1], ref_bias_a[2], ref_bias_a[3]) + '\n' +
+        #             '  bias_phase: [%.2f, %.2f, %.2f, %.2f]' % (ref_bias_phase[0], ref_bias_phase[1], ref_bias_phase[2], ref_bias_phase[3]) + '\n\n')
+        #     print(_str)
         cnt += 1
         SAVE = False
         if SAVE:

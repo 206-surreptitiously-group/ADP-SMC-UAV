@@ -35,7 +35,7 @@ class Proximal_Policy_Optimization:
         self.env = env
         '''PPO'''
         self.gamma = gamma  # discount factor
-        self.K_epochs = K_epochs  # 每隔 timestep_num 学习一次
+        self.K_epochs = K_epochs
         self.eps_clip = eps_clip
         self.action_std = action_std_init
         self.path = path
