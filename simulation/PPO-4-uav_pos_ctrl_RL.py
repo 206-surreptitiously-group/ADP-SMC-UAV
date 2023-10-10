@@ -3,6 +3,7 @@ import sys
 import datetime
 import time
 import cv2 as cv
+import pandas as pd
 import torch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
@@ -84,6 +85,10 @@ pos_ctrl_param.dt = DT
 pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
+
+
+test_episode = []
+test_reward = []
 
 
 def setup_seed(seed):
@@ -298,7 +303,7 @@ if __name__ == '__main__':
 
 			print('Episode: %d | Sumr: %.2f' % (agent.episode , sumr))
 
-			if agent.episode % 50 == 0:
+			if agent.episode % 10 == 0:
 				test_num = 1
 				print('TRAINING PAUSE......')
 				print('Testing...')
@@ -317,8 +322,11 @@ if __name__ == '__main__':
 						env.draw_time_error(env.uav_pos(), env.pos_ref)
 						env.show_image(False)
 					print('Test ', i, ' reward: ', sumr)
+					test_episode.append(agent.episode)
+					test_reward.append(sumr)
 				print('Testing Finished')
 				print('TRAINING Continue......')
+				pd.DataFrame({'episode': test_episode, 'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
 			agent.episode += 1
 	else:
 		pass
