@@ -1,3 +1,4 @@
+import numpy as np
 from uav import UAV, uav_param
 from collector import data_collector
 from FNTSMC import fntsmc_att, fntsmc_pos, fntsmc_param
@@ -46,7 +47,7 @@ class uav_pos_ctrl(UAV):
 		e = self.eta() - ref
 		de = self.dot_eta() - dot_ref
 		self.pos_ctrl.control_update(self.kt, self.m, self.uav_vel(), e, de, dot2_ref, obs)
-		phi_d, theta_d, uf = self.uo_2_ref_angle_throttle()
+		phi_d, theta_d, uf = self.uo_2_ref_angle_throttle(limit=[np.pi / 3, np.pi / 3], att_limitation=True)
 		return phi_d, theta_d, uf
 
 	def att_control(self, ref: np.ndarray, dot_ref: np.ndarray, dot2_ref: np.ndarray, att_only: bool = False):
@@ -71,7 +72,7 @@ class uav_pos_ctrl(UAV):
 		self.att_ctrl.control_update(sec_order_att_dy, ctrl_mat, e, de, dot2_ref)
 		return self.att_ctrl.control
 
-	def uo_2_ref_angle_throttle(self):
+	def uo_2_ref_angle_throttle(self, limit = None, att_limitation: bool = False):
 		ux = self.pos_ctrl.control[0]
 		uy = self.pos_ctrl.control[1]
 		uz = self.pos_ctrl.control[2]
@@ -80,6 +81,10 @@ class uav_pos_ctrl(UAV):
 		phi_d = np.arcsin(asin_phi_d)
 		asin_theta_d = min(max((ux * np.cos(self.psi) + uy * np.sin(self.psi)) * self.m / (uf * np.cos(phi_d)), -1), 1)
 		theta_d = np.arcsin(asin_theta_d)
+		if att_limitation:
+			if limit is not None:
+				phi_d = max(min(phi_d, limit[0]), -limit[0])
+				theta_d = max(min(theta_d, limit[1]), -limit[1])
 		return phi_d, theta_d, uf
 
 	def update(self, action: np.ndarray):
@@ -127,9 +132,19 @@ class uav_pos_ctrl(UAV):
 			rpsi = 0.
 			phase_xyzpsi[3] = 0.
 
+		rxy = np.array([1.5, 1.5])
+		rz = 0.3
+		rpsi = 0.
+
+		Txy = np.array([6., 6.])
+		Tz = 10.
+		Tpsi = 10.
+
+		phase_xyzpsi = np.array([np.pi / 2, 0., 0., 0.])
+
 		self.ref_amplitude = np.array([rxy[0], rxy[1], rz, rpsi])  # x y z psi
 		self.ref_period = np.array([Txy[0], Txy[1], Tz, Tpsi])
-		self.ref_bias_a = np.array([0, 0, 1.5, 0])
+		self.ref_bias_a = np.array([0, 0, 1.0, 0])
 		self.ref_bias_phase = phase_xyzpsi
 
 	def generate_random_start_target(self):

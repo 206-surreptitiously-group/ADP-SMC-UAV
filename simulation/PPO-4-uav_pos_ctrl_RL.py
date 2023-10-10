@@ -192,8 +192,8 @@ if __name__ == '__main__':
 	if ALL_ZERO:
 		pos_ctrl_param.k1 = np.zeros(3)
 		pos_ctrl_param.k2 = np.zeros(3)
-		pos_ctrl_param.gamma = zeros(3)
-		pos_ctrl_param.lmd = zeros(3)
+		pos_ctrl_param.gamma = np.zeros(3)
+		pos_ctrl_param.lmd = np.zeros(3)
 	else:
 		pos_ctrl_param.k1 = np.random.random(3)
 		pos_ctrl_param.k2 = np.random.random(3)
