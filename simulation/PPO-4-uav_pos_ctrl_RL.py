@@ -6,6 +6,7 @@ import cv2 as cv
 import torch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 
 from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
 from environment.envs.UAV.FNTSMC import fntsmc_param
@@ -205,7 +206,7 @@ if __name__ == '__main__':
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
 
 	if TRAIN:
-		action_std_init = 0.8
+		action_std_init = 0.6
 		'''重新加载Policy网络结构，这是必须的操作'''
 		policy = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy', simulationPath)
 		policy_old = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy_old', simulationPath)
@@ -247,22 +248,15 @@ if __name__ == '__main__':
 			while not env.is_terminal:
 				env.current_state = env.next_state.copy()
 				action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 返回三个没有梯度的tensor
-
-				# print(action_from_actor.detach().cpu().numpy().flatten())
-				# env.pos_ctrl_param.print_param()
 				env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-				# env.pos_ctrl_param.print_param()
-
 				action_4_uav = env.generate_action_4_uav()
-
-				# exit(0)
 				env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
 
-				if agent.episode % 50 == 0:  # 50 个回合测试一下看看
-					env.image = env.image_copy.copy()
-					env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-					env.draw_time_error(env.uav_pos(), env.pos_ref)
-					env.show_image(False)
+				# if agent.episode % 50 == 0:  # 50 个回合测试一下看看
+				# 	env.image = env.image_copy.copy()
+				# 	env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
+				# 	env.draw_time_error(env.uav_pos(), env.pos_ref)
+				# 	env.show_image(False)
 
 				sumr += env.reward
 				agent.buffer.append(s=env.current_state,
@@ -303,6 +297,28 @@ if __name__ == '__main__':
 				'''经验池填满的时候，开始新的一次学习'''
 
 			print('Episode: %d | Sumr: %.2f' % (agent.episode , sumr))
+
+			if agent.episode % 50 == 0:
+				test_num = 1
+				print('TRAINING PAUSE......')
+				print('Testing...')
+				for i in range(test_num):
+					env.reset_random()
+					env.show_image(False)
+					sumr = 0.
+					while not env.is_terminal:
+						_action_from_actor = agent.evaluate(env.current_state)
+						env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
+						_action_4_uav = env.generate_action_4_uav()
+						env.step_update(_action_4_uav)
+						sumr += env.reward
+						env.image = env.image_copy.copy()
+						env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
+						env.draw_time_error(env.uav_pos(), env.pos_ref)
+						env.show_image(False)
+					print('Test ', i, ' reward: ', sumr)
+				print('Testing Finished')
+				print('TRAINING Continue......')
 			agent.episode += 1
 	else:
 		pass
