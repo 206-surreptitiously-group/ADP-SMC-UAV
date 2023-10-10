@@ -31,7 +31,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 60
+uav_param.time_max = 30
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
             pos_ctrl.image = pos_ctrl.image_copy.copy()
             pos_ctrl.draw_3d_points_projection(np.atleast_2d([pos_ctrl.uav_pos(), pos_ctrl.pos_ref]), [Color().Red, Color().DarkGreen])
-            pos_ctrl.draw_error(pos_ctrl.uav_pos(), pos_ctrl.pos_ref)
+            pos_ctrl.draw_time_error(pos_ctrl.uav_pos(), pos_ctrl.pos_ref)
             pos_ctrl.show_image(False)
 
         rise = pos_ctrl.RISE()

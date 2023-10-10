@@ -2,6 +2,7 @@ from uav import UAV, uav_param
 from collector import data_collector
 from FNTSMC import fntsmc_att, fntsmc_pos, fntsmc_param
 from ref_cmd import *
+from environment.Color import Color
 
 
 class uav_pos_ctrl(UAV):
@@ -142,7 +143,7 @@ class uav_pos_ctrl(UAV):
 		return start, target
 
 	def uav_reset(self):
-		self.reset()
+		self.reset_uav()
 
 	def uav_reset_with_new_param(self, new_uav_param):
 		self.reset_with_param(new_uav_param)

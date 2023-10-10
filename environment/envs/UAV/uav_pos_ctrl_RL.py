@@ -24,6 +24,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		'''state limitation'''
 
 		'''rl_base'''
+		self.name = 'uav_pos_ctrl_RL'
 		self.state_dim = 3 + 3		# e_pos e_vel
 		self.state_num = [math.inf for _ in range(self.state_dim)]
 		self.state_step = [None for _ in range(self.state_dim)]
@@ -47,7 +48,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.reward = 0.
 		self.Q_pos = np.array([1., 1., 1.])			# 位置误差惩罚
 		self.Q_vel = np.array([0.01, 0.01, 0.01])	# 速度误差惩罚
-		self.R = np.array([0.005, 0.005, 0.005])	# 期望加速度输出 (即控制输出) 惩罚
+		self.R = np.array([0.001, 0.001, 0.001])	# 期望加速度输出 (即控制输出) 惩罚
 		self.is_terminal = False
 		self.terminal_flag = 0
 		'''rl_base'''
@@ -84,7 +85,17 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		'''reward for control output'''
 		u_acc = -np.dot(self.pos_ctrl.control ** 2, self.R)
 
-		self.reward = u_pos + u_vel + u_acc
+		'''reward for att out!!'''
+		u_extra = 0.
+		if self.terminal_flag == 3:
+			print('角度出界了！！')
+			_n = (self.time_max - self.time) / self.dt		# 剩余的步数
+			_e = np.array([self.x_max - self.x_min, self.y_max - self.y_min, self.z_max - self.z_min])
+			u0 = -np.dot(_e ** 2, self.Q_pos) * _n		# 给满位置惩罚
+			u1 = -np.dot(_e_vel ** 2, self.Q_vel) * _n	# 给满速度惩罚
+			u_extra = u0 + u1
+
+		self.reward = u_pos + u_vel + u_acc + u_extra
 
 	def is_success(self):
 		"""
@@ -113,10 +124,25 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.get_reward()
 
 	def get_param_from_actor(self, action_from_actor: np.ndarray):
-		self.pos_ctrl.k1[:] = action_from_actor[0: 3]
-		self.pos_ctrl.k2[:] = action_from_actor[3: 6]
-		self.pos_ctrl.gamma = action_from_actor[6] * np.ones(3)
-		self.pos_ctrl.lmd = action_from_actor[7] * np.ones(3)
+		for i in range(3):
+			if action_from_actor[i] > 0:
+				self.pos_ctrl.k1[i] = action_from_actor[i]
+			if action_from_actor[i + 3] > 0:
+				self.pos_ctrl.k2[i] = action_from_actor[i + 3]
+		if action_from_actor[6] > 0:
+			self.pos_ctrl.gamma[:] = action_from_actor[6]		# gamma gamma gamma
+		if action_from_actor[7] > 0:
+			self.pos_ctrl.lmd[:] = action_from_actor[7]		# lmd lmd lmd
 
 	def reset_random(self):
 		self.reset_uav_random()
+
+		'''RL_BASE'''
+		self.initial_state = self.state_norm()
+		self.current_state = self.initial_state.copy()
+		self.next_state = self.initial_state.copy()
+		self.current_action = self.initial_action.copy()
+		self.reward = 0.
+		self.is_terminal = False
+		self.terminal_flag = 0
+		'''RL_BASE'''

@@ -3,12 +3,13 @@ import sys
 import datetime
 import time
 import cv2 as cv
+import torch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 
 from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
 from environment.envs.UAV.FNTSMC import fntsmc_param
-from environment.envs.UAV.ref_cmd import *
+# from environment.envs.UAV.ref_cmd import *
 from environment.Color import Color
 from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_Optimization as PPO
 from common.common_cls import *
@@ -19,7 +20,6 @@ show_per = 1
 timestep = 0
 ENV = 'uav_pos_ctrl_RL'
 ALGORITHM = 'PPO'
-
 
 '''Parameter list of the quadrotor'''
 DT = 0.01
@@ -38,7 +38,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 60
+uav_param.time_max = 30
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -59,17 +59,31 @@ att_ctrl_param.saturation = np.array([0.3, 0.3, 0.3])
 
 '''Parameter list of the position controller'''
 pos_ctrl_param = fntsmc_param()
-pos_ctrl_param.k1 = np.array([0.6, 0.4, 0.25])			# 1.2, 0.8, 0.5
-pos_ctrl_param.k2 = np.array([0.1, 0.3, 0.25])			# 0.2, 0.6, 0.5
+
+'''RL 学习初始参数'''
+pos_ctrl_param.k1 = np.array([0., 0., 0.])  # 1.2, 0.8, 0.5
+pos_ctrl_param.k2 = np.array([0., 0., 0.])  # 0.2, 0.6, 0.5
 pos_ctrl_param.alpha = np.array([1.2, 1.5, 1.2])
 pos_ctrl_param.beta = np.array([0.3, 0.3, 0.5])
-pos_ctrl_param.gamma = np.array([0., 0., 0.])		# 0.2
-pos_ctrl_param.lmd = np.array([0., 0., 0.])			# 2.0
+pos_ctrl_param.gamma = np.array([0., 0., 0.])  # 0.2
+pos_ctrl_param.lmd = np.array([0., 0., 0.])  # 2.0
+'''RL 学习初始参数'''
+
+'''传统控制参数'''
+# pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
+# pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
+# pos_ctrl_param.alpha = np.array([1.2, 1.5, 1.2])
+# pos_ctrl_param.beta = np.array([0.3, 0.3, 0.5])
+# pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
+# pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
+'''传统控制参数'''
+
 pos_ctrl_param.dim = 3
 pos_ctrl_param.dt = DT
 pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
+
 
 def setup_seed(seed):
 	torch.manual_seed(seed)
@@ -78,7 +92,7 @@ def setup_seed(seed):
 	random.seed(seed)
 
 
-setup_seed(3407)
+# setup_seed(3407)
 
 
 class PPOActorCritic(nn.Module):
@@ -95,7 +109,7 @@ class PPOActorCritic(nn.Module):
 			nn.Linear(64, 64),
 			nn.Tanh(),
 			nn.Linear(64, _action_dim),
-			nn.ReLU()		# 因为是参数优化，所以最后一层用ReLU
+			nn.ReLU()  # 因为是参数优化，所以最后一层用ReLU
 		)
 		self.critic = nn.Sequential(
 			nn.Linear(_state_dim, 64),
@@ -116,11 +130,12 @@ class PPOActorCritic(nn.Module):
 		raise NotImplementedError
 
 	def act(self, _s):
-		action_mean = self.actor(_s)		# PPO 给出的是分布，所以这里直接拿出的只能是 mean
-		cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)		# 协方差矩阵
+		action_mean = self.actor(_s)  # PPO 给出的是分布，所以这里直接拿出的只能是 mean
+		cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)  # 协方差矩阵
 		dist = MultivariateNormal(action_mean, cov_mat)
 
 		_a = dist.sample()
+		# _a = torch.clip(_a, 0, torch.inf)
 		action_logprob = dist.log_prob(_a)
 		state_val = self.critic(_s)
 
@@ -162,7 +177,7 @@ class PPOActorCritic(nn.Module):
 
 
 if __name__ == '__main__':
-	log_dir = '../../../datasave/log/'
+	log_dir = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/log/'
 	if not os.path.exists(log_dir):
 		os.makedirs(log_dir)
 	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
@@ -171,6 +186,21 @@ if __name__ == '__main__':
 	TRAIN = True  # 直接训练
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
+
+	'''随机初始化位置控制参数: 3 个 k1, 3 个 k2, 1 个 gamma, 1 个 lambda'''
+	ALL_ZERO = True
+	if ALL_ZERO:
+		pos_ctrl_param.k1 = np.zeros(3)
+		pos_ctrl_param.k2 = np.zeros(3)
+		pos_ctrl_param.gamma = zeros(3)
+		pos_ctrl_param.lmd = zeros(3)
+	else:
+		pos_ctrl_param.k1 = np.random.random(3)
+		pos_ctrl_param.k2 = np.random.random(3)
+		pos_ctrl_param.gamma = np.random.random() * np.ones(3)
+		pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+	# pos_ctrl_param.print_param()
+	'''随机初始化位置控制参数'''
 
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
 
@@ -196,8 +226,8 @@ if __name__ == '__main__':
 					policy_old=policy_old,
 					path=simulationPath)
 		agent.PPO_info()
-		max_training_timestep = int(env.time_max / env.dt) * 10000  # 10000回合
-		action_std_decay_freq = int(2.5e5)
+		max_training_timestep = int(env.time_max / env.dt) * 1000  # 10000回合
+		action_std_decay_freq = int(9e6)
 		action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
 		min_action_std = 0.1  # minimum action_std (stop decay after action_std <= min_action_std)
 
@@ -206,28 +236,33 @@ if __name__ == '__main__':
 		train_num = 0
 		test_num = 0
 		index = 0
+
 		while timestep <= max_training_timestep:
 			'''这整个是一个 episode 的初始化过程'''
 			env.reset_random()
-			env.show_image(True)
+			env.show_image(False)
+			sumr = 0.
 			'''这整个是一个 episode 的初始化过程'''
-
+			# t1 = time.time()
 			while not env.is_terminal:
 				env.current_state = env.next_state.copy()
 				action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 返回三个没有梯度的tensor
-				action_from_actor = action_from_actor.numpy()	# 这里的 action 实际上就是真是的参数，需要把它们复制给控制器
-				env.get_param_from_actor(action_from_actor)		# 将控制器参数更新
+
+				# print(action_from_actor.detach().cpu().numpy().flatten())
+				# env.pos_ctrl_param.print_param()
+				env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
+				# env.pos_ctrl_param.print_param()
 
 				action_4_uav = env.generate_action_4_uav()
 
+				# exit(0)
 				env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
 
-				if agent.episode % 50 == 0:		# 50 个回合测试一下看看
+				if agent.episode % 50 == 0:  # 50 个回合测试一下看看
 					env.image = env.image_copy.copy()
 					env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-					env.draw_error(env.uav_pos(), env.pos_ref)
+					env.draw_time_error(env.uav_pos(), env.pos_ref)
 					env.show_image(False)
-				'''控制'''
 
 				sumr += env.reward
 				agent.buffer.append(s=env.current_state,
@@ -239,36 +274,35 @@ if __name__ == '__main__':
 									index=index)
 				index += 1
 				timestep += 1
-				'''学习'''
+				if timestep % action_std_decay_freq == 0:
+					agent.decay_action_std(action_std_decay_rate, min_action_std)
+
+				'''经验池填满的时候，开始新的一次学习'''
 				if timestep % agent.buffer.batch_size == 0:
-					print('========== LEARN ==========')
-					print('Episode: {}'.format(agent.episode))
-					print('Num of learning: {}'.format(train_num))
+					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
+					print('  Episode: {}'.format(agent.episode))
+					print('  Num of learning: {}'.format(train_num))
 					agent.learn()
-					'''clear buffer'''
-					average_train_r = round(sumr / (agent.episode + 1 - start_eps), 3)
-					print('Average reward:', average_train_r)
-					# agent.writer.add_scalar('train_r', average_train_r, train_num)		# to tensorboard
-					train_num += 1
-					start_eps = agent.episode
-					sumr = 0
-					index = 0
+
+					train_num += 1					# 训练次数加一
+					start_eps = agent.episode		# PPO 中缺省
+					# sumr = 0
+					index = 0						# 用于记录数据轨迹的索引，学习一次后，经验池清零，索引归零
+					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
+
+					'''每学习 50 次，保存一下'''
 					if train_num % 50 == 0 and train_num > 0:
-						average_test_r = agent.agent_evaluate(5)
-						# agent.writer.add_scalar('test_r', average_test_r, test_num)	# to tensorboard
+						# 	average_test_r = agent.agent_evaluate(5)
 						test_num += 1
-						print('check point save')
-						temp = simulationPath + 'episode' + '_' + str(agent.episode) + '_save/'
+						print('  Training count: {}...check point save...'.format(train_num))
+						temp = simulationPath + 'episode_{}_trainNum_{}/'.format(agent.episode, train_num)
 						os.mkdir(temp)
 						time.sleep(0.01)
 						agent.policy_old.save_checkpoint(name='Policy_PPO', path=temp, num=timestep)
-					print('========== LEARN ==========')
-				'''学习'''
+					'''每学习 50 次，保存一下'''
+				'''经验池填满的时候，开始新的一次学习'''
 
-
-
-				if timestep % action_std_decay_freq == 0:
-					agent.decay_action_std(action_std_decay_rate, min_action_std)
+			print('Episode: %d | Sumr: %.2f' % (agent.episode , sumr))
 			agent.episode += 1
 	else:
 		pass

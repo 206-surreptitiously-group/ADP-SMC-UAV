@@ -13,6 +13,19 @@ class fntsmc_param:
         self.dt: float = 0.01
         self.ctrl0: np.ndarray = np.array([0., 0., 0.])
 
+    def print_param(self):
+        print('==== PARAM ====')
+        print('k1:     ', self.k1)
+        print('k2:     ', self.k2)
+        print('alpha:  ', self.alpha)
+        print('beta:   ', self.beta)
+        print('gamma:  ', self.gamma)
+        print('lambda: ', self.lmd)
+        print('dim:    ', self.dim)
+        print('dt'     , self.dt)
+        print('ctrl0:' , self.ctrl0)
+        print('==== PARAM ====')
+
 
 class fntsmc_pos:
     def __init__(self, param: fntsmc_param):
