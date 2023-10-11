@@ -9,5 +9,11 @@ import pandas
 
 
 if __name__ == '__main__':
-	data = {'episode': np.array([10, 20, 30, 40]), 'reward': np.array([10, 20, 30, 40])}
-	pd.DataFrame(data).to_csv('record.csv')
+	data = pd.read_csv('test_record.csv', header=0).to_numpy()
+	episode = data[:, 1]
+	reward = data[:, 2]
+	plt.figure()
+	plt.plot(episode, reward)
+	plt.xlabel('Episode')
+	plt.ylabel('Reward per episode')
+	plt.show()

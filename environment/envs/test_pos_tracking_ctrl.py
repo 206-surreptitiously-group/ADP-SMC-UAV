@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../')
 from common.common_func import *
 
 '''Parameter list of the quadrotor'''
-DT = 0.01
+DT = 0.02
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8

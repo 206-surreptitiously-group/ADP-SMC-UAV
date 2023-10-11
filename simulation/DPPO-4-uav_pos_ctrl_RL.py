@@ -12,15 +12,22 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
 from environment.envs.UAV.FNTSMC import fntsmc_param
 from environment.Color import Color
-from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_Optimization as PPO
+from algorithm.policy_base.Distributed_PPO import Distributed_PPO as DPPO
+from algorithm.policy_base.Distributed_PPO import Worker
 from common.common_cls import *
 from common.common_func import *
 
-optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/'
+
+optPath = '../../../datasave/network/'
+show_per = 1
+timestep = 0
+optPath = '../../../datasave/network/'
 show_per = 1
 timestep = 0
 ENV = 'uav_pos_ctrl_RL'
-ALGORITHM = 'PPO'
+ALGORITHM = 'DPPO'
+
+os.environ["OMP_NUM_THREADS"] = "1"		# 很关键，必须得加
 
 '''Parameter list of the quadrotor'''
 DT = 0.01
@@ -85,19 +92,8 @@ pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
 
-
 test_episode = []
 test_reward = []
-
-
-def setup_seed(seed):
-	torch.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed)
-	np.random.seed(seed)
-	random.seed(seed)
-
-
-# setup_seed(3407)
 
 
 class PPOActorCritic(nn.Module):
@@ -182,13 +178,14 @@ class PPOActorCritic(nn.Module):
 
 
 if __name__ == '__main__':
-	log_dir = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/log/'
+	log_dir = '../../../datasave/log/'
 	if not os.path.exists(log_dir):
 		os.makedirs(log_dir)
-	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
+	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ENV + '/'
 	os.mkdir(simulationPath)
 	c = cv.waitKey(1)
-	TRAIN = False  # 直接训练
+
+	TRAIN = True  # 直接训练
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
 
@@ -210,137 +207,63 @@ if __name__ == '__main__':
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
 
 	if TRAIN:
-		action_std_init = 0.6
-		'''重新加载Policy网络结构，这是必须的操作'''
-		policy = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy', simulationPath)
-		policy_old = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy_old', simulationPath)
-		# optimizer = torch.optim.Adam([
-		# 	{'params': agent.policy.actor.parameters(), 'lr': agent.actor_lr},
-		# 	{'params': agent.policy.critic.parameters(), 'lr': agent.critic_lr}
-		# ])
-		'''重新加载Policy网络结构，这是必须的操作'''
-		agent = PPO(env=env,
-					actor_lr=1e-4,
-					critic_lr=1e-3,
-					gamma=0.99,
-					K_epochs=50,
-					eps_clip=0.2,
-					action_std_init=action_std_init,
-					buffer_size=int(env.time_max / env.dt * 2),  # 假设可以包含两条完整的最长时间的轨迹
-					policy=policy,
-					policy_old=policy_old,
-					path=simulationPath)
-		agent.PPO_info()
-		max_training_timestep = int(env.time_max / env.dt) * 1000  # 10000回合
-		action_std_decay_freq = int(9e6)
-		action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
-		min_action_std = 0.1  # minimum action_std (stop decay after action_std <= min_action_std)
+		'''1. 启动多进程'''
+		mp.set_start_method('spawn', force=True)
 
-		sumr = 0
-		start_eps = 0
-		train_num = 0
-		test_num = 0
-		index = 0
+		'''2. 定义 DPPO 机器基本参数'''
+		'''
+			这里需要注意，多进程学习的时候学习率要适当下调。主观来讲，如果最开始学习的方向是最优的，那么学习率不减小也没事，控制器肯定收敛特别快，毕竟多进程学习。
+			但是如果最开始的方向不好，那么如果不下调学习率，就会导致：
+				1. 网络朝着不好的方向走的特别快
+				2. 多个进程都学习得很 “快”。local_A 刚朝着 a 的方向走了挺大一步，然后 local_B 又朝着 b 的方向掰了一下。
+				这下 global 就懵逼了，没等 global 缓过来呢，local_C，local_D，local_E 咋咋呼呼地就来了，每个人都朝自己的方向走一大步，global 直接崩溃了。
+			所以，多进程时，学习率要适当下降，同时需要下调每次学习的网络更新次数 K_epo。理由也同样。走的长度等于每一步长度乘以次数，如果学习率很小，但是每次走一万步，
+			global 也得懵逼。
+			对于很简单的任务，多进程不见得好。一个人能干完的事，非得10个人干，再加一个监督者，一共11个人，不好管。
+			多进程学习适用与那些奖励函数明明给得很合理，但是就是学不出来的环境。实在是没办法了，同时多一些人出去探索探索，集思广益，一起学习。
+			但是还是要注意，每个人同时不要走太远，不要走太快，稳稳当当一步一步来。
+			脑海中一定要有这么个观念：从完成任务的目的出发，policy-based 算法的多进程、value-based 算法的经验池，都是一种牛逼但是 “无奈” 之举。
+		'''
+		process_num = 15
+		actor_lr = 1e-5 / min(process_num, 5)
+		critic_lr = 1e-4 / min(process_num, 5)  # 一直都是 1e-3
+		action_std = 0.6
+		k_epo = int(100 / process_num * 1)  # int(100 / process_num * 1.1)
+		agent = DPPO(env=env, actor_lr=actor_lr, critic_lr=critic_lr, num_of_pro=process_num, path=simulationPath)
 
-		while timestep <= max_training_timestep:
-			'''这整个是一个 episode 的初始化过程'''
-			env.reset_random()
-			env.show_image(False)
-			sumr = 0.
-			'''这整个是一个 episode 的初始化过程'''
-			# t1 = time.time()
-			while not env.is_terminal:
-				env.current_state = env.next_state.copy()
-				action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 返回三个没有梯度的tensor
-				env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-				action_4_uav = env.generate_action_4_uav()
-				env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
-				sumr += env.reward
+		'''3. 重新加载全局网络和优化器，这是必须的操作，因为考虑到不同的学习环境要设计不同的网络结构，在训练前，要重写 PPOActorCritic 类'''
+		agent.global_policy = PPOActorCritic(agent.env.state_dim, agent.env.action_dim, action_std, 'GlobalPolicy', simulationPath)
+		if RETRAIN:
+			agent.global_policy.load_state_dict(torch.load('Policy_PPO_4_20700'))
+		agent.global_policy.share_memory()
+		agent.optimizer = SharedAdam([
+			{'params': agent.global_policy.actor.parameters(), 'lr': actor_lr},
+			{'params': agent.global_policy.critic.parameters(), 'lr': critic_lr}
+		])
 
-				agent.buffer.append(s=env.current_state,
-									a=action_from_actor,  # .cpu().numpy()
-									log_prob=a_log_prob.numpy(),
-									r=env.reward,
-									sv=s_value.numpy(),
-									done=1.0 if env.is_terminal else 0.0,
-									index=index)
-				index += 1
-				timestep += 1
-				if timestep % action_std_decay_freq == 0:
-					agent.decay_action_std(action_std_decay_rate, min_action_std)
+		'''4. 添加进程'''
+		ppo_msg = {'gamma': 0.99, 'k_epo': k_epo, 'eps_c': 0.2, 'a_std': 0.6, 'device': 'cpu', 'loss': nn.MSELoss()}
+		for i in range(agent.num_of_pro):
+			w = Worker(g_pi=agent.global_policy,
+					   l_pi=PPOActorCritic(agent.env.state_dim, agent.env.action_dim, action_std, 'LocalPolicy', simulationPath),
+					   g_opt=agent.optimizer,
+					   g_train_n=agent.global_training_num,
+					   _index=i,
+					   _name='worker' + str(i),
+					   _env=env,  # 或者直接写env，随意
+					   _queue=agent.queue,
+					   _lock=agent.lock,
+					   _ppo_msg=ppo_msg)
+			agent.add_worker(w)
+		agent.DPPO_info()
 
-				'''经验池填满的时候，开始新的一次学习'''
-				if timestep % agent.buffer.batch_size == 0:
-					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
-					print('  Episode: {}'.format(agent.episode))
-					print('  Num of learning: {}'.format(train_num))
-					agent.learn()
-
-					train_num += 1					# 训练次数加一
-					start_eps = agent.episode		# PPO 中缺省
-					# sumr = 0
-					index = 0						# 用于记录数据轨迹的索引，学习一次后，经验池清零，索引归零
-					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
-
-					'''每学习 50 次，保存一下'''
-					if train_num % 50 == 0 and train_num > 0:
-						# 	average_test_r = agent.agent_evaluate(5)
-						test_num += 1
-						print('  Training count: {}...check point save...'.format(train_num))
-						temp = simulationPath + 'episode_{}_trainNum_{}/'.format(agent.episode, train_num)
-						os.mkdir(temp)
-						time.sleep(0.01)
-						agent.policy_old.save_checkpoint(name='Policy_PPO', path=temp, num=timestep)
-					'''每学习 50 次，保存一下'''
-				'''经验池填满的时候，开始新的一次学习'''
-
-			print('Episode: %d | Sumr: %.2f' % (agent.episode , sumr))
-
-			if agent.episode % 10 == 0:
-				test_num = 1
-				print('TRAINING PAUSE......')
-				print('Testing...')
-				for i in range(test_num):
-					env.reset_random()
-					env.show_image(False)
-					sumr = 0.
-					while not env.is_terminal:
-						_action_from_actor = agent.evaluate(env.current_state)
-						env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-						_action_4_uav = env.generate_action_4_uav()
-						env.step_update(_action_4_uav)
-						sumr += env.reward
-						env.image = env.image_copy.copy()
-						env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-						env.draw_time_error(env.uav_pos(), env.pos_ref)
-						env.show_image(False)
-					print('Test ', i, ' reward: ', sumr)
-					test_episode.append(agent.episode)
-					test_reward.append(sumr)
-				print('Testing Finished')
-				print('TRAINING Continue......')
-				pd.DataFrame({'episode': test_episode, 'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
-			agent.episode += 1
+		'''5. 启动多进程'''
+		'''
+			15 个学习进程，一个评估进程，一共 16 个。
+			学习进程结束会释放标志，当评估进程收集到 15 个标志时，评估结束。
+			评估结束时，评估程序跳出 while True 死循环，整体程序结束。
+			结果存储在 simulationPath 中，评估过程中自动存储，不用管。
+		'''
+		agent.start_multi_process()
 	else:
-		test_num = 10
-		policy = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy', simulationPath)
-		agent = PPO(env=env, policy=policy, policy_old=policy, path=simulationPath)
-		# agent.policy.load_state_dict(torch.load(optPath + ALGORITHM + '-4-' + ENV))
-		agent.policy.load_state_dict(torch.load(optPath + 'Policy_PPO2700000'))
-		for i in range(test_num):
-			env.reset_random()
-			env.show_image(False)
-			sumr = 0.
-			while not env.is_terminal:
-				_action_from_actor = agent.evaluate(env.current_state)
-				env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-				_action_4_uav = env.generate_action_4_uav()
-				env.step_update(_action_4_uav)
-				sumr += env.reward
-				env.image = env.image_copy.copy()
-				env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-				env.draw_time_error(env.uav_pos(), env.pos_ref)
-				env.show_image(False)
-			print('Test ', i, ' reward: ', sumr)
-			test_episode.append(agent.episode)
-			test_reward.append(sumr)
+		pass
