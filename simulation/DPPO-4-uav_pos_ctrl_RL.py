@@ -14,6 +14,7 @@ from environment.envs.UAV.FNTSMC import fntsmc_param
 from environment.Color import Color
 from algorithm.policy_base.Distributed_PPO import Distributed_PPO as DPPO
 from algorithm.policy_base.Distributed_PPO import Worker
+import torch.multiprocessing as mp
 from common.common_cls import *
 from common.common_func import *
 
@@ -30,7 +31,7 @@ ALGORITHM = 'DPPO'
 os.environ["OMP_NUM_THREADS"] = "1"		# 很关键，必须得加
 
 '''Parameter list of the quadrotor'''
-DT = 0.01
+DT = 0.02
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8
@@ -46,7 +47,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 30
+uav_param.time_max = 20
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''

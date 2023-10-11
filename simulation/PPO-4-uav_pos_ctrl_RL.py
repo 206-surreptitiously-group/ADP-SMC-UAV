@@ -23,7 +23,7 @@ ENV = 'uav_pos_ctrl_RL'
 ALGORITHM = 'PPO'
 
 '''Parameter list of the quadrotor'''
-DT = 0.01
+DT = 0.02
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8
@@ -39,7 +39,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 30
+uav_param.time_max = 20
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -188,7 +188,7 @@ if __name__ == '__main__':
 	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
 	os.mkdir(simulationPath)
 	c = cv.waitKey(1)
-	TRAIN = False  # 直接训练
+	TRAIN = True  # 直接训练
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
 
@@ -208,6 +208,7 @@ if __name__ == '__main__':
 	'''随机初始化位置控制参数'''
 
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+	print(env.time_max)
 
 	if TRAIN:
 		action_std_init = 0.6
@@ -232,7 +233,7 @@ if __name__ == '__main__':
 					path=simulationPath)
 		agent.PPO_info()
 		max_training_timestep = int(env.time_max / env.dt) * 1000  # 10000回合
-		action_std_decay_freq = int(9e6)
+		action_std_decay_freq = int(5e5)
 		action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
 		min_action_std = 0.1  # minimum action_std (stop decay after action_std <= min_action_std)
 

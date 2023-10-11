@@ -205,7 +205,7 @@ class uav_pos_ctrl(UAV):
 		self.generate_random_circle(yaw_fixed=False)
 		ref, _, _, _ = ref_uav(0., self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
 
-		self.param.time_max = 30
+		self.param.time_max = 20
 		self.param.pos0 = self.set_random_init_pos(pos0=ref[0:3], r=0.3 * np.ones(3))
 
 		self.uav_reset_with_new_param(new_uav_param=self.param)

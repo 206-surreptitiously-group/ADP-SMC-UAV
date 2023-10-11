@@ -19,7 +19,7 @@ class uav_param:
 		self.angle0: np.ndarray = np.array([0, 0, 0])
 		self.pqr0: np.ndarray = np.array([0, 0, 0])
 		self.dt = 0.01
-		self.time_max = 30  # 每回合最大时间
+		self.time_max = 20  # 每回合最大时间
 		self.pos_zone = np.atleast_2d([[-5, 5], [-5, 5], [0, 3]])  # 定义飞行区域，不可以出界
 		self.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 
@@ -460,7 +460,7 @@ class UAV:
 	def is_episode_Terminal(self) -> tuple:
 		_terminal = False
 		if self.time > self.time_max - self.dt / 2:
-			print('Time out...')
+			# print('Time out...')
 			self.terminal_flag = 1
 			_terminal = True
 		# if self.is_pos_out():

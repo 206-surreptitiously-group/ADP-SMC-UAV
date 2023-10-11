@@ -43,7 +43,7 @@ class Worker(mp.Process):
         self.env = _env
         self.queue = _queue
         self.lock = _lock
-        self.buffer = RolloutBuffer(int(self.env.timeMax / self.env.dt * 2), self.env.state_dim, self.env.action_dim)
+        self.buffer = RolloutBuffer(int(self.env.time_max / self.env.dt * 2), self.env.state_dim, self.env.action_dim)
         self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
         self.gamma = _ppo_msg['gamma']
         self.k_epo = _ppo_msg['k_epo']
@@ -123,9 +123,9 @@ class Worker(mp.Process):
         self.set_action_std(self.action_std)
 
     def run(self):
-        max_training_timestep = int(self.env.timeMax / self.env.dt) * 2000
+        max_training_timestep = int(self.env.time_max / self.env.dt) * 1000
         # max_training_timestep = 5000
-        action_std_decay_freq = int(9e6)  # 每隔这么多个 timestep 把探索方差减小点
+        action_std_decay_freq = int(5e5)  # 每隔这么多个 timestep 把探索方差减小点
         action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
         min_action_std = 0.1  # 方差最小不能小于 0.4，不管啥时候，都得适当探索
         train_num = 0
@@ -141,7 +141,7 @@ class Worker(mp.Process):
                 # sumr = 0.
                 while not self.env.is_terminal:
                     self.env.current_state = self.env.next_state.copy()
-                    action_from_actor, s, a_log_prob, s_value = agent.choose_action(self.env.current_state)  # 返回三个没有梯度的tensor
+                    action_from_actor, s, a_log_prob, s_value = self.choose_action(self.env.current_state)  # 返回三个没有梯度的tensor
                     self.env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
                     action_4_uav = self.env.generate_action_4_uav()
                     self.env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
@@ -229,9 +229,9 @@ class Distributed_PPO:
             training_r = self.queue.get()
             if training_r is None:
                 break
-            if self.global_training_num.value % 50 == 0:
+            if self.global_training_num.value % 5 == 0:
                 print('Training count:, ', self.global_training_num.value)
-            if self.global_training_num.value % 300 == 0:
+            if self.global_training_num.value % 50 == 0:
                 # 	print('Training count:, ', self.global_training_num.value)
                 '''主进程不停地测试，每次随机选择 500 个回合。保存每次记录开始时候的网络，直至循环完成或者强制停止'''
                 training_num_temp = self.global_training_num.value  # 记录一下当前的数字，因为测试和学习同时进行的，号码容易窜
@@ -255,13 +255,6 @@ class Distributed_PPO:
                         self.env.draw_3d_points_projection(np.atleast_2d([self.env.uav_pos(), self.env.pos_ref]), [Color().Red, Color().DarkGreen])
                         self.env.draw_time_error(self.env.uav_pos(), self.env.pos_ref)
                         self.env.show_image(False)
-                        # self.env.current_state = self.env.next_state.copy()
-                        # action_from_actor = self.evaluate(self.env.current_state).detach().cpu().numpy()
-                        # action = self.action_linear_trans(action_from_actor.flatten())  # 将动作转换到实际范围上
-                        # # print(action_from_actor, action)
-                        # self.env.step_update(action.astype(np.float32))  # 环境更新的action需要是物理的action
-                        # r += self.env.reward
-                        # self.env.show_dynamic_image(isWait=False)  # 画图
                     print('  ==TESTING=====')
                     print('  Reward:', sumr)
         print('...training end...')
