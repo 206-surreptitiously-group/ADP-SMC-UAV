@@ -147,22 +147,17 @@ class uav_pos_ctrl(UAV):
 		"""
 		if is_random:
 			rxy = np.random.uniform(low=0, high=3, size=2)  # 随机生成 xy 方向振幅
-			rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z  方向振幅
+			rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z 方向振幅
 			rpsi = np.random.uniform(low=0, high=np.pi / 2)
 
-			Txy = np.random.uniform(low=5, high=10, size=2)  # 随机生成 xy 方向周期
-			Tz = np.random.uniform(low=5, high=10)  # 随机生成 z  方向周期
-			Tpsi = np.random.uniform(low=5, high=10)
-
+			T = np.random.uniform(low=5, high=10, size=4)  # 随机生成周期
 			phase_xyzpsi = np.random.uniform(low=0, high=np.pi / 2, size=4)
 		else:
 			rxy = np.array([1.5, 1.5])
 			rz = 0.3
 			rpsi = 0.
 
-			Txy = np.array([6., 6.])
-			Tz = 10.
-			Tpsi = 10.
+			T = np.array([6., 6., 10, 10])
 
 			phase_xyzpsi = np.array([np.pi / 2, 0., 0., 0.])
 
@@ -171,8 +166,8 @@ class uav_pos_ctrl(UAV):
 			phase_xyzpsi[3] = 0.
 
 		self.ref_amplitude = np.array([rxy[0], rxy[1], rz, rpsi])  # x y z psi
-		self.ref_period = np.array([Txy[0], Txy[1], Tz, Tpsi])
-		self.ref_bias_a = np.array([0, 0, 1.0, 0])
+		self.ref_period = T
+		self.ref_bias_a = np.array([0, 0, 1.5, 0])
 		self.ref_bias_phase = phase_xyzpsi
 		self.trajectory = self.generate_ref_trajectory(self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
 
@@ -237,7 +232,7 @@ class uav_pos_ctrl(UAV):
 		@return:
 		"""
 		'''1. generate random trajectory'''
-		self.generate_random_trajectory(is_random=random_trajectroy, yaw_fixed=False)
+		self.generate_random_trajectory(is_random=random_trajectroy, yaw_fixed=True)
 
 		'''2. reset uav randomly or not'''
 		if random_pos0:

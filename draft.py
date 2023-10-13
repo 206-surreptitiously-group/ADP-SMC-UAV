@@ -49,9 +49,8 @@ class PPOActorCritic(nn.Module):
 
 
 if __name__ == '__main__':
-	pos_zone = np.atleast_2d([[-5, 5], [-5, 5], [0, 5]])
-	att_zone = np.atleast_2d([[-45, 45], [-45, 45], [-120, 120]])
-	_ref_bias_a = np.random.uniform(low=np.concatenate((pos_zone[:, 0], [att_zone[2][0]])),
-									high=np.concatenate((pos_zone[:, 1], [att_zone[2][1]])),
-									size=4)
-	print(_ref_bias_a)
+	data = pd.read_csv('./datasave/nets/test_record.csv', header=0).to_numpy()
+	print(data.shape)
+	plt.figure()
+	plt.plot(data[:,0], data[:,1])
+	plt.show()

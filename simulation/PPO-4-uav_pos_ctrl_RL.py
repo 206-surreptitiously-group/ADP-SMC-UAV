@@ -42,7 +42,7 @@ uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
 uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
-uav_param.att_zone = np.atleast_2d([[deg2rad(-70), deg2rad(70)], [deg2rad(-70), deg2rad(70)], [deg2rad(-120), deg2rad(120)]])
+uav_param.att_zone = np.atleast_2d([[deg2rad(-90), deg2rad(90)], [deg2rad(-90), deg2rad(90)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
 
 '''Parameter list of the attitude controller'''
@@ -235,7 +235,7 @@ if __name__ == '__main__':
 	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
 	os.mkdir(simulationPath)
 	c = cv.waitKey(1)
-	TRAIN = True  # 直接训练
+	TRAIN = False  # 直接训练
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
 
@@ -366,4 +366,29 @@ if __name__ == '__main__':
 			print('Sumr: %.2f' % (sumr))
 			print('~~~~~~~~~~  Training End ~~~~~~~~~~')
 	else:
-		pass
+		policy = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy', simulationPath)
+		policy_old = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy_old', simulationPath)
+		agent = PPO(env=env_test, policy=policy, policy_old=policy_old, path=simulationPath)
+		agent.policy.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
+		n = 100
+		for i in range(n):
+			reset_pos_ctrl_param('optimal')
+			env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
+													random_pos0=True,
+													new_att_ctrl_param=None,
+													new_pos_ctrl_parma=pos_ctrl_param)
+			env_test.show_image(False)
+			test_r = 0.
+			optimal_param = np.zeros(8)
+			while not env_test.is_terminal:
+				_a = agent.evaluate(env_test.current_state)
+				env_test.get_param_from_actor(_a.detach().cpu().numpy().flatten())  # 将控制器参数更新
+				_a_4_uav = env_test.generate_action_4_uav()
+				env_test.step_update(_a_4_uav)
+				test_r += env_test.reward
+
+				# env_test.image = env_test.image_copy.copy()
+				# env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
+				# env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
+				# env_test.show_image(False)
+			print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
