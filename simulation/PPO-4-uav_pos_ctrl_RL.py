@@ -101,17 +101,22 @@ def setup_seed(seed):
 # setup_seed(3407)
 
 
-def reset_pos_ctrl_param(all_zero):
-	if all_zero:
+def reset_pos_ctrl_param(flag: str):
+	if flag == 'zero':
 		pos_ctrl_param.k1 = 0.01 * np.ones(3)
 		pos_ctrl_param.k2 = 0.01 * np.ones(3)
 		pos_ctrl_param.gamma = 0.01 * np.ones(3)
 		pos_ctrl_param.lmd = 0.01 * np.ones(3)
-	else:
+	elif flag == 'random':
 		pos_ctrl_param.k1 = np.random.random(3)
 		pos_ctrl_param.k2 = np.random.random(3)
 		pos_ctrl_param.gamma = np.random.random() * np.ones(3)
 		pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+	else:	# optimal
+		pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
+		pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
+		pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
+		pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
 
 
 class PPOActorCritic(nn.Module):
@@ -123,18 +128,22 @@ class PPOActorCritic(nn.Module):
 		# 应该是初始化方差，一个动作就一个方差，两个动作就两个方差，std 是标准差
 		self.action_var = torch.full((_action_dim,), _action_std_init * _action_std_init)
 		self.actor = nn.Sequential(
-			nn.Linear(_state_dim, 64),
+			nn.Linear(_state_dim, 256),
 			nn.Tanh(),
-			nn.Linear(64, 64),
+			nn.Linear(256, 128),
+			nn.Tanh(),
+			nn.Linear(128, 64),
 			nn.Tanh(),
 			nn.Linear(64, _action_dim),
 			nn.ReLU()  # 因为是参数优化，所以最后一层用ReLU
 		)
 		# nn.init.orthogonal(self.actor)
 		self.critic = nn.Sequential(
-			nn.Linear(_state_dim, 64),
+			nn.Linear(_state_dim, 256),
 			nn.Tanh(),
-			nn.Linear(64, 64),
+			nn.Linear(256, 128),
+			nn.Tanh(),
+			nn.Linear(128, 64),
 			nn.Tanh(),
 			nn.Linear(64, 1)
 		)
@@ -148,19 +157,23 @@ class PPOActorCritic(nn.Module):
 
 	def actor_reset_orthogonal(self):
 		nn.init.orthogonal_(self.actor[0].weight, gain=1.0)
-		nn.init.constant_(self.actor[0].bias, 0)
+		nn.init.constant_(self.actor[0].bias, 1e-3)
 		nn.init.orthogonal_(self.actor[2].weight, gain=1.0)
-		nn.init.constant_(self.actor[2].bias, 0)
+		nn.init.constant_(self.actor[2].bias, 1e-3)
 		nn.init.orthogonal_(self.actor[4].weight, gain=0.01)
-		nn.init.constant_(self.actor[4].bias, 0)
+		nn.init.constant_(self.actor[4].bias, 1e-3)
+		nn.init.orthogonal_(self.actor[6].weight, gain=0.01)
+		nn.init.constant_(self.actor[6].bias, 1e-3)
 
 	def critic_reset_orthogonal(self):
 		nn.init.orthogonal_(self.critic[0].weight, gain=1.0)
-		nn.init.constant_(self.critic[0].bias, 0)
+		nn.init.constant_(self.critic[0].bias, 1e-3)
 		nn.init.orthogonal_(self.critic[2].weight, gain=1.0)
-		nn.init.constant_(self.critic[2].bias, 0)
+		nn.init.constant_(self.critic[2].bias, 1e-3)
 		nn.init.orthogonal_(self.critic[4].weight, gain=1.0)
-		nn.init.constant_(self.critic[4].bias, 0)
+		nn.init.constant_(self.critic[4].bias, 1e-3)
+		nn.init.orthogonal_(self.critic[6].weight, gain=1.0)
+		nn.init.constant_(self.critic[6].bias, 1e-3)
 
 	def set_action_std(self, new_action_std):
 		self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
@@ -226,21 +239,14 @@ if __name__ == '__main__':
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
 
-	'''随机初始化位置控制参数: 3 个 k1, 3 个 k2, 1 个 gamma, 1 个 lambda'''
-	reset_pos_ctrl_param(True)
-	# pos_ctrl_param.print_param()
-	'''随机初始化位置控制参数'''
-
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
-	reset_pos_ctrl_param(True)
-	env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+	reset_pos_ctrl_param('zero')
+	env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 	env.show_image(True)
 
-	# TODO 此时控制参数正常
-
 	env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
-	reset_pos_ctrl_param(True)
-	env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+	reset_pos_ctrl_param('optimal')
+	env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 
 	if TRAIN:
 		action_std_init = 0.6	# 初始探索方差
@@ -262,9 +268,9 @@ if __name__ == '__main__':
 
 		agent = PPO(env=env,
 					actor_lr=1e-4,
-					critic_lr=5e-4,
+					critic_lr=1e-3,
 					gamma=0.99,
-					K_epochs=30,
+					K_epochs=8,
 					eps_clip=0.2,
 					action_std_init=action_std_init,
 					buffer_size=1024,  # 假设可以包含两条完整的最长时间的轨迹
@@ -281,9 +287,9 @@ if __name__ == '__main__':
 			'''2. 重新开始一次收集数据'''
 			while buffer_index < agent.buffer.batch_size:
 				if env.is_terminal:		# 如果某一个回合结束
-					reset_pos_ctrl_param(True)
+					reset_pos_ctrl_param('zero')
 					env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
-													   random_pos0=True,
+													   random_pos0=False,
 													   new_att_ctrl_param=None,
 													   new_pos_ctrl_parma=pos_ctrl_param)
 				else:
@@ -314,12 +320,16 @@ if __name__ == '__main__':
 				print('   Training pause......')
 				print('   Testing...')
 				for i in range(n):
-					reset_pos_ctrl_param(True)
-					env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+					reset_pos_ctrl_param('zero')
+					env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
+															random_pos0=False,
+															new_att_ctrl_param=None,
+															new_pos_ctrl_parma=pos_ctrl_param)
 					test_r = 0.
+					# print('init state', env_test.uav_state_call_back())
 					while not env_test.is_terminal:
-						_aa = agent.evaluate(env_test.current_state)
-						env_test.get_param_from_actor(_aa.detach().cpu().numpy().flatten())  # 将控制器参数更新
+						_a = agent.evaluate(env_test.current_state)
+						env_test.get_param_from_actor(_a.detach().cpu().numpy().flatten())  # 将控制器参数更新
 						_a_4_uav = env_test.generate_action_4_uav()
 						env_test.step_update(_a_4_uav)
 						test_r += env_test.reward
@@ -329,7 +339,7 @@ if __name__ == '__main__':
 						env_test.show_image(False)
 					test_num += 1
 					test_reward.append(test_r)
-					print('Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+					print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
 				pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
 				print('   Testing finished...')
 				print('   Go back to training...')
@@ -348,6 +358,7 @@ if __name__ == '__main__':
 
 			'''每学习 500 次，减小一次探索方差'''
 			if t_epoch % action_std_decay_freq == 0 and t_epoch > 0:
+				print('......action_std_decay......')
 				agent.decay_action_std(action_std_decay_rate, min_action_std)
 			'''每学习 500 次，减小一次探索方差'''
 
