@@ -134,8 +134,19 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		if action_from_actor[7] > 0:
 			self.pos_ctrl.lmd[:] = action_from_actor[7]		# lmd lmd lmd
 
-	def reset_random(self):
-		self.reset_uav_random()
+	def reset_uav_pos_ctrl_RL_tracking(self,
+									   random_trajectroy: bool = False,
+									   random_pos0: bool = False,
+									   new_att_ctrl_param: fntsmc_param = None,
+									   new_pos_ctrl_parma: fntsmc_param = None):
+		"""
+		@param random_trajectroy:
+		@param random_pos0:
+		@param new_att_ctrl_param:
+		@param new_pos_ctrl_parma:
+		@return:
+		"""
+		self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, new_att_ctrl_param, new_pos_ctrl_parma)
 
 		'''RL_BASE'''
 		self.initial_state = self.state_norm()

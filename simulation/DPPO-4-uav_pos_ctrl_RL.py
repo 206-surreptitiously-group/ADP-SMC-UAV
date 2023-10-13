@@ -120,6 +120,19 @@ class PPOActorCritic(nn.Module):
 			nn.Tanh(),
 			nn.Linear(64, 1)
 		)
+		nn.init.orthogonal_(self.actor[0].weight, gain=1.0)
+		nn.init.constant_(self.actor[0].bias, 0)
+		nn.init.orthogonal_(self.actor[2].weight, gain=1.0)
+		nn.init.constant_(self.actor[2].bias, 0)
+		nn.init.orthogonal_(self.actor[4].weight, gain=0.01)
+		nn.init.constant_(self.actor[4].bias, 0)
+
+		nn.init.orthogonal_(self.critic[0].weight, gain=1.0)
+		nn.init.constant_(self.critic[0].bias, 0)
+		nn.init.orthogonal_(self.critic[2].weight, gain=1.0)
+		nn.init.constant_(self.critic[2].bias, 0)
+		nn.init.orthogonal_(self.critic[4].weight, gain=1.0)
+		nn.init.constant_(self.critic[4].bias, 0)
 		# self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 		self.device = 'cpu'
 		# torch.cuda.empty_cache()
@@ -225,7 +238,7 @@ if __name__ == '__main__':
 			但是还是要注意，每个人同时不要走太远，不要走太快，稳稳当当一步一步来。
 			脑海中一定要有这么个观念：从完成任务的目的出发，policy-based 算法的多进程、value-based 算法的经验池，都是一种牛逼但是 “无奈” 之举。
 		'''
-		process_num = 15
+		process_num = 5
 		actor_lr = 1e-5 / min(process_num, 5)
 		critic_lr = 1e-4 / min(process_num, 5)  # 一直都是 1e-3
 		action_std = 0.6

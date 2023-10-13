@@ -65,17 +65,6 @@ pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 if __name__ == '__main__':
     '''1. Define a controller'''
     pos_ctrl = uav_pos_ctrl(uav_param, att_ctrl_param, pos_ctrl_param)
-    # quad_vis.reset()
-    # pos_ctrl.uav_reset()
-    # pos_ctrl.controller_reset()
-    # pos_ctrl.collector_reset()
-
-    '''2. Define parameters for signal generator'''
-    # ref_amplitude = np.array([2, 2.5, 0.5, deg2rad(0)])  # x y z psi
-    # ref_period = np.array([5, 10, 10, 4])
-    # ref_bias_a = np.array([0, 0, 1, 0])
-    # ref_bias_phase = np.array([np.pi / 2, 0, 0, np.pi / 2])
-    # ref_amplitude, ref_period, ref_bias_a, ref_bias_phase = pos_ctrl.generate_random_circle(yaw_fixed=False)
 
     NUM_OF_SIMULATION = 10
     cnt = 0

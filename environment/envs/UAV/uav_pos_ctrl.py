@@ -11,8 +11,6 @@ class uav_pos_ctrl(UAV):
 		super(uav_pos_ctrl, self).__init__(UAV_param)
 		self.att_ctrl = fntsmc_att(att_ctrl_param)
 		self.pos_ctrl = fntsmc_pos(pos_ctrl_param)
-		self.att_ctrl_param = att_ctrl_param
-		self.pos_ctrl_param = pos_ctrl_param
 
 		self.collector = data_collector(round(self.time_max / self.dt))
 		self.collector.reset(round(self.time_max / self.dt))
@@ -23,13 +21,15 @@ class uav_pos_ctrl(UAV):
 		self.att_ref_old = np.zeros(3)
 		self.dot_att_ref = np.zeros(3)
 
-		self.obs = np.zeros(3)
-		self.dis = np.zeros(3)
+		self.obs = np.zeros(3)			# output of the observer
+		self.dis = np.zeros(3)			# external disturbance, known by me, but not the controller
 
+		'''参考轨迹记录'''
 		self.ref_amplitude = None
 		self.ref_period = None
 		self.ref_bias_a = None
 		self.ref_bias_phase = None
+		'''参考轨迹记录'''
 
 	def pos_control(self, ref: np.ndarray, dot_ref: np.ndarray, dot2_ref: np.ndarray, dis: np.ndarray, obs: np.ndarray):
 		"""
@@ -103,7 +103,7 @@ class uav_pos_ctrl(UAV):
 		self.collector.record(data_block)
 		self.rk44(action=action, dis=self.dis, n=1, att_only=False)
 
-	def generate_ref_pos_trajectory(self, _amplitude: np.ndarray, _period: np.ndarray, _bias_a: np.ndarray, _bias_phase: np.ndarray):
+	def generate_ref_trajectory(self, _amplitude: np.ndarray, _period: np.ndarray, _bias_a: np.ndarray, _bias_phase: np.ndarray):
 		"""
         @param _amplitude:
         @param _period:
@@ -115,37 +115,66 @@ class uav_pos_ctrl(UAV):
 		rx = _bias_a[0] + _amplitude[0] * np.sin(2 * np.pi / _period[0] * t + _bias_phase[0])
 		ry = _bias_a[1] + _amplitude[1] * np.sin(2 * np.pi / _period[1] * t + _bias_phase[1])
 		rz = _bias_a[2] + _amplitude[2] * np.sin(2 * np.pi / _period[2] * t + _bias_phase[2])
-		# rpsi = _bias_a[3] + _amplitude[3] * np.sin(2 * np.pi / _period[3] * t + _bias_phase[3])
-		return np.vstack((rx, ry, rz)).T
+		rpsi = _bias_a[3] + _amplitude[3] * np.sin(2 * np.pi / _period[3] * t + _bias_phase[3])
+		return np.vstack((rx, ry, rz, rpsi)).T
 
-	def generate_random_circle(self, yaw_fixed: bool = False):
-		rxy = np.random.uniform(low=0, high=3, size=2)  # 随机生成 xy 方向振幅
-		rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z  方向振幅
-		rpsi = np.random.uniform(low=0, high=np.pi / 2)
+	def generate_random_set_point(self, is_random: bool = False, pos: np.ndarray = np.zeros, yaw_fixed: bool = True):
+		"""
+		@param is_random:
+		@param pos:
+		@return:
+		"""
+		if is_random:
+			_ref_bias_a = np.random.uniform(low=np.concatenate((self.pos_zone[:, 0], [self.att_zone[2][0]])),
+											high=np.concatenate((self.pos_zone[:, 1], [self.att_zone[2][1]])),
+											size=4)
+		else:
+			_yaw = np.random.uniform(low=self.att_zone[2][0], high=self.att_zone[2][1])
+			_ref_bias_a = np.concatenate((pos, [_yaw]))
 
-		Txy = np.random.uniform(low=5, high=10, size=2)  # 随机生成 xy 方向周期
-		Tz = np.random.uniform(low=5, high=10)  # 随机生成 z  方向周期
-		Tpsi = np.random.uniform(low=5, high=10)
+		if yaw_fixed:
+			_ref_bias_a[3] = 0.
+		self.ref_amplitude = np.zeros(4)
+		self.ref_period = np.ones(4)
+		self.ref_bias_a = _ref_bias_a
+		self.ref_bias_phase = np.zeros(4)
 
-		phase_xyzpsi = np.random.uniform(low=0, high=np.pi / 2, size=4)
+	def generate_random_trajectory(self, is_random: bool = False, yaw_fixed: bool = True):
+		"""
+		@param is_random:	随机在振幅与周期
+		@param yaw_fixed:	偏航角固定
+		@return:			None
+		"""
+		if is_random:
+			rxy = np.random.uniform(low=0, high=3, size=2)  # 随机生成 xy 方向振幅
+			rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z  方向振幅
+			rpsi = np.random.uniform(low=0, high=np.pi / 2)
+
+			Txy = np.random.uniform(low=5, high=10, size=2)  # 随机生成 xy 方向周期
+			Tz = np.random.uniform(low=5, high=10)  # 随机生成 z  方向周期
+			Tpsi = np.random.uniform(low=5, high=10)
+
+			phase_xyzpsi = np.random.uniform(low=0, high=np.pi / 2, size=4)
+		else:
+			rxy = np.array([1.5, 1.5])
+			rz = 0.3
+			rpsi = 0.
+
+			Txy = np.array([6., 6.])
+			Tz = 10.
+			Tpsi = 10.
+
+			phase_xyzpsi = np.array([np.pi / 2, 0., 0., 0.])
+
 		if yaw_fixed:
 			rpsi = 0.
 			phase_xyzpsi[3] = 0.
-
-		rxy = np.array([1.5, 1.5])
-		rz = 0.3
-		rpsi = 0.
-
-		Txy = np.array([6., 6.])
-		Tz = 10.
-		Tpsi = 10.
-
-		phase_xyzpsi = np.array([np.pi / 2, 0., 0., 0.])
 
 		self.ref_amplitude = np.array([rxy[0], rxy[1], rz, rpsi])  # x y z psi
 		self.ref_period = np.array([Txy[0], Txy[1], Tz, Tpsi])
 		self.ref_bias_a = np.array([0, 0, 1.0, 0])
 		self.ref_bias_phase = phase_xyzpsi
+		self.trajectory = self.generate_ref_trajectory(self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
 
 	def generate_random_start_target(self):
 		x = np.random.uniform(low=self.pos_zone[0][0], high=self.pos_zone[0][1], size=2)
@@ -157,21 +186,15 @@ class uav_pos_ctrl(UAV):
 		target = st[:, 1]
 		return start, target
 
-	def uav_reset(self):
-		self.reset_uav()
-
-	def uav_reset_with_new_param(self, new_uav_param):
-		self.reset_with_param(new_uav_param)
-
 	def controller_reset(self):
-		self.att_ctrl.__init__(self.att_ctrl_param)
-		self.pos_ctrl.__init__(self.pos_ctrl_param)
+		self.att_ctrl.fntsmc_att_reset()
+		self.pos_ctrl.fntsmc_pos_reset()
 
-	def controller_reset_with_new_param(self, new_att_param: fntsmc_param, new_pos_param: fntsmc_param):
-		self.att_ctrl_param = new_att_param
-		self.pos_ctrl_param = new_pos_param
-		self.att_ctrl.__init__(self.att_ctrl_param)
-		self.pos_ctrl.__init__(self.pos_ctrl_param)
+	def controller_reset_with_new_param(self, new_att_param: fntsmc_param = None, new_pos_param: fntsmc_param = None):
+		if new_att_param is not None:
+			self.att_ctrl.fntsmc_att_reset_with_new_param(new_att_param)
+		if new_pos_param is not None:
+			self.pos_ctrl.fntsmc_pos_reset_with_new_param(new_pos_param)
 
 	def collector_reset(self, N: int):
 		self.collector.reset(N)
@@ -201,18 +224,45 @@ class uav_pos_ctrl(UAV):
 
 		return action_4_uav
 
-	def reset_uav_random(self):
-		self.generate_random_circle(yaw_fixed=False)
-		ref, _, _, _ = ref_uav(0., self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
+	def reset_uav_pos_ctrl(self,
+						   random_trajectroy: bool = False,
+						   random_pos0: bool = False,
+						   new_att_ctrl_param: fntsmc_param = None,
+						   new_pos_ctrl_parma: fntsmc_param = None):
+		"""
+		@param random_trajectroy:
+		@param random_pos0:
+		@param new_att_ctrl_param:
+		@param new_pos_ctrl_parma:
+		@return:
+		"""
+		'''1. generate random trajectory'''
+		self.generate_random_trajectory(is_random=random_trajectroy, yaw_fixed=False)
 
-		self.param.time_max = 20
-		self.param.pos0 = self.set_random_init_pos(pos0=ref[0:3], r=0.3 * np.ones(3))
+		'''2. reset uav randomly or not'''
+		if random_pos0:
+			_param = self.get_param_from_uav()
+			_param.pos0 = self.set_random_init_pos(pos0=self.trajectory[0][0:3], r=0.3 * np.ones(3))
+			self.reset_uav_with_param(_param)
+		else:
+			self.reset_uav()
 
-		self.uav_reset_with_new_param(new_uav_param=self.param)
-		self.controller_reset_with_new_param(new_att_param=self.att_ctrl_param, new_pos_param=self.pos_ctrl_param)
-		self.collector_reset(round(self.param.time_max / self.dt))
-		ref_traj = self.generate_ref_pos_trajectory(self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
-		self.draw_3d_trajectory_projection(ref_traj)
+		'''3. reset collector'''
+		self.collector_reset(round(self.time_max / self.dt))
+
+		'''4. reset controller'''
+		if new_att_ctrl_param is not None:
+			self.att_ctrl.fntsmc_att_reset_with_new_param(new_att_ctrl_param)
+		else:
+			self.att_ctrl.fntsmc_att_reset()
+
+		if new_pos_ctrl_parma is not None:
+			self.pos_ctrl.fntsmc_pos_reset_with_new_param(new_pos_ctrl_parma)
+		else:
+			self.pos_ctrl.fntsmc_pos_reset()
+
+		'''5. reset iamge'''
+		self.draw_3d_trajectory_projection(self.trajectory)
 		self.draw_init_image()
 
 	def RISE(self, offset: float = 0.1):

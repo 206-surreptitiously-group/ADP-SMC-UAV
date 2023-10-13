@@ -42,7 +42,6 @@ class fntsmc_pos:
         self.dot_sigma_o1 = np.zeros(self.dim)
         self.sigma_o1 = np.zeros(self.dim)
         self.so = self.sigma_o + self.lmd * self.sigma_o1
-        # self.ctrl = np.zeros(self.dim)
         self.control = param.ctrl0
 
     def control_update(self, kp: float, m: float, vel: np.ndarray, e: np.ndarray, de: np.ndarray, dd_ref: np.ndarray, obs: np.ndarray):
@@ -68,6 +67,28 @@ class fntsmc_pos:
         uo2 = -self.k2 * self.so - obs
 
         self.control = uo1 + uo2
+
+    def fntsmc_pos_reset(self):
+        self.sigma_o = np.zeros(self.dim)
+        self.dot_sigma_o1 = np.zeros(self.dim)
+        self.sigma_o1 = np.zeros(self.dim)
+        self.so = self.sigma_o + self.lmd * self.sigma_o1
+
+    def fntsmc_pos_reset_with_new_param(self, param: fntsmc_param):
+        self.k1 = param.k1
+        self.k2 = param.k2
+        self.alpha = param.alpha
+        self.beta = param.beta
+        self.gamma = param.gamma
+        self.lmd = param.lmd
+        self.dt = param.dt
+        self.dim = param.dim
+
+        self.sigma_o = np.zeros(self.dim)
+        self.dot_sigma_o1 = np.zeros(self.dim)
+        self.sigma_o1 = np.zeros(self.dim)
+        self.so = self.sigma_o + self.lmd * self.sigma_o1
+        self.control = param.ctrl0
 
 
 class fntsmc_att:
@@ -114,3 +135,26 @@ class fntsmc_att:
         # u2 = -self.k2 * self.sigma
 
         self.control = -np.dot(np.linalg.inv(control_mat), u1 + u2)
+
+    def fntsmc_att_reset(self):
+        self.s = np.zeros(self.dim)
+        self.dot_s1 = np.zeros(self.dim)
+        self.s1 = np.zeros(self.dim)
+        self.sigma = self.s + self.lmd * self.s1
+
+    def fntsmc_att_reset_with_new_param(self, param: fntsmc_param):
+        self.k1 = param.k1
+        self.k2 = param.k2
+        self.alpha = param.alpha
+        self.beta = param.beta
+        self.gamma = param.gamma
+        self.lmd = param.lmd
+        self.dt = param.dt
+
+        self.dim = param.dim
+
+        self.s = np.zeros(self.dim)
+        self.dot_s1 = np.zeros(self.dim)
+        self.s1 = np.zeros(self.dim)
+        self.sigma = self.s + self.lmd * self.s1
+        self.control = param.ctrl0

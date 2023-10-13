@@ -221,42 +221,44 @@ class Distributed_PPO:
         self.processes = [mp.Process(target=self.global_evaluate, args=())]  # evaluation process
         '''multi process'''
 
-        self.evaluate_record = []
-        self.training_record = []
+        self.test_reward = []
 
     def global_evaluate(self):
         while True:
             training_r = self.queue.get()
             if training_r is None:
                 break
-            if self.global_training_num.value % 5 == 0:
-                print('Training count:, ', self.global_training_num.value)
             if self.global_training_num.value % 50 == 0:
-                # 	print('Training count:, ', self.global_training_num.value)
-                '''主进程不停地测试，每次随机选择 500 个回合。保存每次记录开始时候的网络，直至循环完成或者强制停止'''
+                print('Training count:, ', self.global_training_num.value)
                 training_num_temp = self.global_training_num.value  # 记录一下当前的数字，因为测试和学习同时进行的，号码容易窜
-                self.eval_policy.load_state_dict(self.global_policy.state_dict())  # 复制 global policy
                 print('...saving check point... ', int(training_num_temp))
                 self.global_policy.save_checkpoint(name='Policy_PPO', path=self.path, num=training_num_temp)
-                # self.save_models()
-                eval_num = 1
-                sumr = 0
-                for i in range(eval_num):
-                    if i % 100 == 0:
-                        print('测试: ', i)
-                    self.env.reset_random()     # 这个是 DPPO 的 env，与 Worker 的无关
-                    while not self.env.is_terminal:
-                        _action_from_actor = self.evaluate(self.env.current_state)
-                        self.env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-                        _action_4_uav = self.env.generate_action_4_uav()
-                        self.env.step_update(_action_4_uav)
-                        sumr += self.env.reward
-                        self.env.image = self.env.image_copy.copy()
-                        self.env.draw_3d_points_projection(np.atleast_2d([self.env.uav_pos(), self.env.pos_ref]), [Color().Red, Color().DarkGreen])
-                        self.env.draw_time_error(self.env.uav_pos(), self.env.pos_ref)
-                        self.env.show_image(False)
-                    print('  ==TESTING=====')
-                    print('  Reward:', sumr)
+                pd.DataFrame({'reward': self.test_reward}).to_csv(self.path + 'test_record.csv')
+            # if self.global_training_num.value % 50 == 0:
+            # 	print('Training count:, ', self.global_training_num.value)
+            '''主进程不停地测试，每次随机选择 若干 个回合。保存每次记录开始时候的网络，直至循环完成或者强制停止'''
+
+            self.eval_policy.load_state_dict(self.global_policy.state_dict())  # 复制 global policy
+
+            sumr = 0
+            self.env.reset_random()     # 这个是 DPPO 的 env，与 Worker 的无关
+            while not self.env.is_terminal:
+                _action_from_actor = self.evaluate(self.env.current_state)
+                # self.env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
+                _action_4_uav = self.env.generate_action_4_uav()
+                # print('k1', self.env.pos_ctrl.k1)
+                # print('k2', self.env.pos_ctrl.k2)
+                # print('gamma', self.env.pos_ctrl.gamma)
+                # print('lmd', self.env.pos_ctrl.lmd)
+                self.env.step_update(_action_4_uav)
+                sumr += self.env.reward
+                self.env.image = self.env.image_copy.copy()
+                self.env.draw_3d_points_projection(np.atleast_2d([self.env.uav_pos(), self.env.pos_ref]), [Color().Red, Color().DarkGreen])
+                self.env.draw_time_error(self.env.uav_pos(), self.env.pos_ref)
+                self.env.show_image(False)
+            self.test_reward.append(sumr)
+            print('  ==TESTING=====')
+            print('  Reward:', sumr)
         print('...training end...')
 
     def add_worker(self, worker: Worker):
@@ -294,21 +296,3 @@ class Distributed_PPO:
         print('state_dim:', self.state_dim_nn)
         print('action_dim:', self.action_dim_nn)
         print('action_range:', self.action_range)
-
-    def action_linear_trans(self, action):
-        # the action output
-        linear_action = []
-        for i in range(self.action_dim_nn):
-            a = min(max(action[i], -1), 1)
-            maxa = self.action_range[i][1]
-            mina = self.action_range[i][0]
-            k = (maxa - mina) / 2
-            b = (maxa + mina) / 2
-            linear_action.append(k * a + b)
-        return np.array(linear_action)
-
-    def save_training_record(self):
-        pd.DataFrame({'training record': self.training_record}).to_csv(self.path + 'train_record.csv', index=True, sep=',')
-
-    def save_evaluation_record(self):
-        pd.DataFrame({'evaluation record': self.evaluate_record}).to_csv(self.path + 'evaluate_record.csv', index=True, sep=',')

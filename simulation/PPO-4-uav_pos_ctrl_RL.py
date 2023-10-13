@@ -6,6 +6,7 @@ import cv2 as cv
 import pandas as pd
 import torch
 
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 
@@ -39,7 +40,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 20
+uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -100,6 +101,19 @@ def setup_seed(seed):
 # setup_seed(3407)
 
 
+def reset_pos_ctrl_param(all_zero):
+	if all_zero:
+		pos_ctrl_param.k1 = 0.01 * np.ones(3)
+		pos_ctrl_param.k2 = 0.01 * np.ones(3)
+		pos_ctrl_param.gamma = 0.01 * np.ones(3)
+		pos_ctrl_param.lmd = 0.01 * np.ones(3)
+	else:
+		pos_ctrl_param.k1 = np.random.random(3)
+		pos_ctrl_param.k2 = np.random.random(3)
+		pos_ctrl_param.gamma = np.random.random() * np.ones(3)
+		pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+
+
 class PPOActorCritic(nn.Module):
 	def __init__(self, _state_dim, _action_dim, _action_std_init, name='PPOActorCritic', chkpt_dir=''):
 		super(PPOActorCritic, self).__init__()
@@ -116,6 +130,7 @@ class PPOActorCritic(nn.Module):
 			nn.Linear(64, _action_dim),
 			nn.ReLU()  # 因为是参数优化，所以最后一层用ReLU
 		)
+		# nn.init.orthogonal(self.actor)
 		self.critic = nn.Sequential(
 			nn.Linear(_state_dim, 64),
 			nn.Tanh(),
@@ -123,10 +138,29 @@ class PPOActorCritic(nn.Module):
 			nn.Tanh(),
 			nn.Linear(64, 1)
 		)
+		self.actor_reset_orthogonal()
+		self.critic_reset_orthogonal()
+
 		# self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 		self.device = 'cpu'
 		# torch.cuda.empty_cache()
 		self.to(self.device)
+
+	def actor_reset_orthogonal(self):
+		nn.init.orthogonal_(self.actor[0].weight, gain=1.0)
+		nn.init.constant_(self.actor[0].bias, 0)
+		nn.init.orthogonal_(self.actor[2].weight, gain=1.0)
+		nn.init.constant_(self.actor[2].bias, 0)
+		nn.init.orthogonal_(self.actor[4].weight, gain=0.01)
+		nn.init.constant_(self.actor[4].bias, 0)
+
+	def critic_reset_orthogonal(self):
+		nn.init.orthogonal_(self.critic[0].weight, gain=1.0)
+		nn.init.constant_(self.critic[0].bias, 0)
+		nn.init.orthogonal_(self.critic[2].weight, gain=1.0)
+		nn.init.constant_(self.critic[2].bias, 0)
+		nn.init.orthogonal_(self.critic[4].weight, gain=1.0)
+		nn.init.constant_(self.critic[4].bias, 0)
 
 	def set_action_std(self, new_action_std):
 		self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
@@ -193,25 +227,30 @@ if __name__ == '__main__':
 	TEST = not TRAIN
 
 	'''随机初始化位置控制参数: 3 个 k1, 3 个 k2, 1 个 gamma, 1 个 lambda'''
-	ALL_ZERO = True
-	if ALL_ZERO:
-		pos_ctrl_param.k1 = np.zeros(3)
-		pos_ctrl_param.k2 = np.zeros(3)
-		pos_ctrl_param.gamma = np.zeros(3)
-		pos_ctrl_param.lmd = np.zeros(3)
-	else:
-		pos_ctrl_param.k1 = np.random.random(3)
-		pos_ctrl_param.k2 = np.random.random(3)
-		pos_ctrl_param.gamma = np.random.random() * np.ones(3)
-		pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+	reset_pos_ctrl_param(True)
 	# pos_ctrl_param.print_param()
 	'''随机初始化位置控制参数'''
 
 	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
-	print(env.time_max)
+	reset_pos_ctrl_param(True)
+	env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+	env.show_image(True)
+
+	# TODO 此时控制参数正常
+
+	env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+	reset_pos_ctrl_param(True)
+	env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
 
 	if TRAIN:
-		action_std_init = 0.6
+		action_std_init = 0.6	# 初始探索方差
+		min_action_std = 0.1	# 最小探索方差
+		max_t_epoch = 1e4		# 最大训练次数
+		t_epoch = 0				# 当前训练次数
+		action_std_decay_freq = int(500)	# 每训练 500 次，减小一次探索方差
+		action_std_decay_rate = 0.05  # 每次减小方差的数值
+		test_num = 0
+
 		'''重新加载Policy网络结构，这是必须的操作'''
 		policy = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy', simulationPath)
 		policy_old = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy_old', simulationPath)
@@ -220,128 +259,100 @@ if __name__ == '__main__':
 		# 	{'params': agent.policy.critic.parameters(), 'lr': agent.critic_lr}
 		# ])
 		'''重新加载Policy网络结构，这是必须的操作'''
+
 		agent = PPO(env=env,
 					actor_lr=1e-4,
-					critic_lr=1e-3,
+					critic_lr=5e-4,
 					gamma=0.99,
-					K_epochs=50,
+					K_epochs=30,
 					eps_clip=0.2,
 					action_std_init=action_std_init,
-					buffer_size=int(env.time_max / env.dt * 2),  # 假设可以包含两条完整的最长时间的轨迹
+					buffer_size=1024,  # 假设可以包含两条完整的最长时间的轨迹
 					policy=policy,
 					policy_old=policy_old,
 					path=simulationPath)
 		agent.PPO_info()
-		max_training_timestep = int(env.time_max / env.dt) * 1000  # 10000回合
-		action_std_decay_freq = int(5e5)
-		action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
-		min_action_std = 0.1  # minimum action_std (stop decay after action_std <= min_action_std)
 
-		sumr = 0
-		start_eps = 0
-		train_num = 0
-		test_num = 0
-		index = 0
-
-		while timestep <= max_training_timestep:
-			'''这整个是一个 episode 的初始化过程'''
-			env.reset_random()
-			env.show_image(False)
+		while t_epoch < max_t_epoch:
+			'''1. 初始化 buffer 索引和累计奖励记录'''
 			sumr = 0.
-			'''这整个是一个 episode 的初始化过程'''
-			# t1 = time.time()
-			while not env.is_terminal:
-				env.current_state = env.next_state.copy()
-				action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 返回三个没有梯度的tensor
-				env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-				action_4_uav = env.generate_action_4_uav()
-				env.step_update(action_4_uav)  # 环境更新的action需要是物理的action
-				sumr += env.reward
+			buffer_index = 0
 
-				agent.buffer.append(s=env.current_state,
-									a=action_from_actor,  # .cpu().numpy()
-									log_prob=a_log_prob.numpy(),
-									r=env.reward,
-									sv=s_value.numpy(),
-									done=1.0 if env.is_terminal else 0.0,
-									index=index)
-				index += 1
-				timestep += 1
-				if timestep % action_std_decay_freq == 0:
-					agent.decay_action_std(action_std_decay_rate, min_action_std)
+			'''2. 重新开始一次收集数据'''
+			while buffer_index < agent.buffer.batch_size:
+				if env.is_terminal:		# 如果某一个回合结束
+					reset_pos_ctrl_param(True)
+					env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
+													   random_pos0=True,
+													   new_att_ctrl_param=None,
+													   new_pos_ctrl_parma=pos_ctrl_param)
+				else:
+					env.current_state = env.next_state.copy()
+					action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 待探索，无梯度
+					env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
+					action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
+					env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
+					sumr += env.reward
 
-				'''经验池填满的时候，开始新的一次学习'''
-				if timestep % agent.buffer.batch_size == 0:
-					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
-					print('  Episode: {}'.format(agent.episode))
-					print('  Num of learning: {}'.format(train_num))
-					agent.learn()
+					agent.buffer.append(s=env.current_state,
+										a=action_from_actor,  # .cpu().numpy()
+										log_prob=a_log_prob.numpy(),
+										r=env.reward,
+										sv=s_value.numpy(),
+										done=1.0 if env.is_terminal else 0.0,
+										index=buffer_index)
+					buffer_index += 1
 
-					train_num += 1					# 训练次数加一
-					start_eps = agent.episode		# PPO 中缺省
-					# sumr = 0
-					index = 0						# 用于记录数据轨迹的索引，学习一次后，经验池清零，索引归零
-					print('  ~~~~~~~~~~ LEARN ~~~~~~~~~~')
+			'''3. 开始一次新的学习'''
+			print('~~~~~~~~~~ Training Start~~~~~~~~~~')
+			print('Train Epoch: {}'.format(t_epoch))
+			agent.learn()
 
-					'''每学习 50 次，保存一下'''
-					if train_num % 50 == 0 and train_num > 0:
-						# 	average_test_r = agent.agent_evaluate(5)
-						test_num += 1
-						print('  Training count: {}...check point save...'.format(train_num))
-						temp = simulationPath + 'episode_{}_trainNum_{}/'.format(agent.episode, train_num)
-						os.mkdir(temp)
-						time.sleep(0.01)
-						agent.policy_old.save_checkpoint(name='Policy_PPO', path=temp, num=timestep)
-					'''每学习 50 次，保存一下'''
-				'''经验池填满的时候，开始新的一次学习'''
+			'''每学习 10 次，测试一下'''
+			if t_epoch % 10 == 0 and t_epoch > 0:
+				n = 1
+				print('   Training pause......')
+				print('   Testing...')
+				for i in range(n):
+					reset_pos_ctrl_param(True)
+					env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+					test_r = 0.
+					while not env_test.is_terminal:
+						_aa = agent.evaluate(env_test.current_state)
+						env_test.get_param_from_actor(_aa.detach().cpu().numpy().flatten())  # 将控制器参数更新
+						_a_4_uav = env_test.generate_action_4_uav()
+						env_test.step_update(_a_4_uav)
+						test_r += env_test.reward
+						env_test.image = env_test.image_copy.copy()
+						env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
+						env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
+						env_test.show_image(False)
+					test_num += 1
+					test_reward.append(test_r)
+					print('Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+				pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
+				print('   Testing finished...')
+				print('   Go back to training...')
+			'''每学习 10 次，测试一下'''
 
-			print('Episode: %d | Sumr: %.2f' % (agent.episode , sumr))
+			'''每学习 50 次，保存一下 policy'''
+			if t_epoch % 50 == 0 and t_epoch > 0:
+				# 	average_test_r = agent.agent_evaluate(5)
+				test_num += 1
+				print('...check point save...')
+				temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
+				os.mkdir(temp)
+				time.sleep(0.01)
+				agent.policy_old.save_checkpoint(name='Policy_PPO', path=temp, num=t_epoch)
+			'''每学习 50 次，保存一下 policy'''
 
-			if agent.episode % 10 == 0:
-				test_num = 1
-				print('TRAINING PAUSE......')
-				print('Testing...')
-				for i in range(test_num):
-					env.reset_random()
-					env.show_image(False)
-					sumr = 0.
-					while not env.is_terminal:
-						_action_from_actor = agent.evaluate(env.current_state)
-						env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-						_action_4_uav = env.generate_action_4_uav()
-						env.step_update(_action_4_uav)
-						sumr += env.reward
-						env.image = env.image_copy.copy()
-						env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-						env.draw_time_error(env.uav_pos(), env.pos_ref)
-						env.show_image(False)
-					print('Test ', i, ' reward: ', sumr)
-					test_episode.append(agent.episode)
-					test_reward.append(sumr)
-				print('Testing Finished')
-				print('TRAINING Continue......')
-				pd.DataFrame({'episode': test_episode, 'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
-			agent.episode += 1
+			'''每学习 500 次，减小一次探索方差'''
+			if t_epoch % action_std_decay_freq == 0 and t_epoch > 0:
+				agent.decay_action_std(action_std_decay_rate, min_action_std)
+			'''每学习 500 次，减小一次探索方差'''
+
+			t_epoch += 1
+			print('Sumr: %.2f' % (sumr))
+			print('~~~~~~~~~~  Training End ~~~~~~~~~~')
 	else:
-		test_num = 10
-		policy = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy', simulationPath)
-		agent = PPO(env=env, policy=policy, policy_old=policy, path=simulationPath)
-		# agent.policy.load_state_dict(torch.load(optPath + ALGORITHM + '-4-' + ENV))
-		agent.policy.load_state_dict(torch.load(optPath + 'Policy_PPO2700000'))
-		for i in range(test_num):
-			env.reset_random()
-			env.show_image(False)
-			sumr = 0.
-			while not env.is_terminal:
-				_action_from_actor = agent.evaluate(env.current_state)
-				env.get_param_from_actor(_action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
-				_action_4_uav = env.generate_action_4_uav()
-				env.step_update(_action_4_uav)
-				sumr += env.reward
-				env.image = env.image_copy.copy()
-				env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
-				env.draw_time_error(env.uav_pos(), env.pos_ref)
-				env.show_image(False)
-			print('Test ', i, ' reward: ', sumr)
-			test_episode.append(agent.episode)
-			test_reward.append(sumr)
+		pass

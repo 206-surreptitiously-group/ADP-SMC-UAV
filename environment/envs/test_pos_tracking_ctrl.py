@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import datetime
 import os
 import sys
@@ -9,6 +7,7 @@ from UAV.ref_cmd import *
 from UAV.uav import uav_param
 from UAV.uav_pos_ctrl import uav_pos_ctrl
 from environment.Color import Color
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../../')
 
@@ -31,7 +30,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 30
+uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -64,6 +63,18 @@ pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
 
+ALL_ZERO = False
+if ALL_ZERO:
+    pos_ctrl_param.k1 = 0.01 * np.ones(3)
+    pos_ctrl_param.k2 = 0.01 * np.ones(3)
+    pos_ctrl_param.gamma = 0.01 * np.ones(3)
+    pos_ctrl_param.lmd = 0.01 * np.ones(3)
+else:
+    pos_ctrl_param.k1 = np.random.random(3)
+    pos_ctrl_param.k2 = np.random.random(3)
+    pos_ctrl_param.gamma = np.random.random() * np.ones(3)
+    pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+
 if __name__ == '__main__':
     pos_ctrl = uav_pos_ctrl(uav_param, att_ctrl_param, pos_ctrl_param)
 
@@ -72,16 +83,13 @@ if __name__ == '__main__':
 
     while cnt < NUM_OF_SIMULATION:
         '''生成新的参考轨迹的信息'''
-        pos_ctrl.reset_uav_random()
+        pos_ctrl.reset_uav_pos_ctrl(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
         pos_ctrl.show_image(True)
 
         if cnt % 1 == 0:
             print('Current:', cnt)
 
         while pos_ctrl.time < pos_ctrl.time_max - DT / 2:
-            # if pos_ctrl.n % 1000 == 0:
-            #     print('time: ', pos_ctrl.n * pos_ctrl.dt)
-
             action_4_uav = pos_ctrl.generate_action_4_uav()
             pos_ctrl.update(action=np.array(action_4_uav))
 
@@ -109,7 +117,6 @@ if __name__ == '__main__':
                         datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '/')
             os.mkdir(new_path)
             pos_ctrl.collector.package2file(path=new_path)
-        # # plt.ion()
         # pos_ctrl.collector.plot_att()
         # # pos_ctrl.collector.plot_pqr()
         # # pos_ctrl.collector.plot_torque()
@@ -117,6 +124,4 @@ if __name__ == '__main__':
         # pos_ctrl.collector.plot_vel()
         # # pos_ctrl.collector.plot_throttle()
         # # pos_ctrl.collector.plot_outer_obs()
-        # # plt.pause(2)
-        # # plt.ioff()
         # plt.show()

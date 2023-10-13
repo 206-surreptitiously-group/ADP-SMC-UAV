@@ -28,11 +28,11 @@ class uav_param:
 		print('    g   : ', self.g)
 		print('    J   : ', self.J)
 		print('    d   : ', self.d)
-		print('    CT  : ', self.CT)
-		print('    CM  : ', self.CM)
-		print('    J0  : ', self.J0)
-		print('    kr  : ', self.kr)
-		print('    kt  : ', self.kt)
+		print('   CT   : ', self.CT)
+		print('   CM   : ', self.CM)
+		print('   J0   : ', self.J0)
+		print('   kr   : ', self.kr)
+		print('   kt   : ', self.kt)
 		print('  pos0  : ', self.pos0)
 		print('  vel0  : ', self.vel0)
 		print(' angle0 : ', self.angle0)
@@ -45,7 +45,6 @@ class uav_param:
 
 class UAV:
 	def __init__(self, param: uav_param):
-		self.param = param
 		self.m = param.m
 		self.g = param.g
 		self.J = param.J
@@ -56,18 +55,12 @@ class UAV:
 		self.kr = param.kr
 		self.kt = param.kt
 
-		self.x = param.pos0[0]
-		self.y = param.pos0[1]
-		self.z = param.pos0[2]
-		self.vx = param.vel0[0]
-		self.vy = param.vel0[1]
-		self.vz = param.vel0[2]
-		self.phi = param.angle0[0]
-		self.theta = param.angle0[1]
-		self.psi = param.angle0[2]
-		self.p = param.pqr0[0]
-		self.q = param.pqr0[1]
-		self.r = param.pqr0[2]
+		self.x, self.y, self.z = param.pos0
+		self.vx, self.vy, self.vz = param.vel0
+		self.phi, self.theta, self.psi = param.angle0
+		self.p, self.q, self.r = param.pqr0
+
+		self.init_state = np.concatenate((param.pos0, param.vel0, param.angle0, param.pos0))
 
 		self.dt = param.dt
 		self.n = 0  # 记录走过的拍数
@@ -80,12 +73,9 @@ class UAV:
 
 		self.pos_zone = param.pos_zone
 		self.att_zone = param.att_zone
-		self.x_min = self.pos_zone[0][0]
-		self.x_max = self.pos_zone[0][1]
-		self.y_min = self.pos_zone[1][0]
-		self.y_max = self.pos_zone[1][1]
-		self.z_min = self.pos_zone[2][0]
-		self.z_max = self.pos_zone[2][1]
+		self.x_min, self.x_max = self.pos_zone[0]
+		self.y_min, self.y_max = self.pos_zone[1]
+		self.z_min, self.z_max = self.pos_zone[2]
 
 		'''opencv visualization'''
 		self.width = 1200
@@ -401,6 +391,7 @@ class UAV:
 			xx[0:6] = np.zeros(6)[:]
 		self.set_state(xx)
 		self.time += self.dt
+		# print('self.dt', self.dt)
 		if self.psi > np.pi:  # 如果角度超过 180 度
 			self.psi -= 2 * np.pi
 		if self.psi < -np.pi:  # 如果角度小于 -180 度
@@ -473,54 +464,75 @@ class UAV:
 			_terminal = True
 		return _terminal, self.terminal_flag
 
+	def get_param_from_uav(self) -> uav_param:
+		_param = uav_param()
+		_param.m = self.m
+		_param.g = self.g
+		_param.J = self.J
+		_param.d = self.d
+		_param.CT = self.CT
+		_param.CM = self.CM
+		_param.J0 = self.J0
+		_param.kr = self.kr
+		_param.kt = self.kt
+		_param.pos0[:] = self.init_state[0:3]
+		_param.vel0 = self.init_state[3:6]
+		_param.angle0 = self.init_state[6:9]
+		_param.pqr0 = self.init_state[9:12]
+		_param.dt = self.dt
+		_param.time_max = self.time_max
+		_param.pos_zone[:] = self.pos_zone[:]
+		_param.att_zone[:] = self.att_zone[:]
+		return _param
+
 	def reset_uav(self):
-		self.m = self.param.m
-		self.g = self.param.g
-		self.J = self.param.J
-		self.d = self.param.d
-		self.CT = self.param.CT
-		self.CM = self.param.CM
-		self.J0 = self.param.J0
-		self.kr = self.param.kr
-		self.kt = self.param.kt
+		self.x, self.y, self.z, self.vx, self.vy, self.vz, self.phi, self.theta, self.psi, self.p, self.q, self.r = self.init_state
 
-		self.x = self.param.pos0[0]
-		self.y = self.param.pos0[1]
-		self.z = self.param.pos0[2]
-		self.vx = self.param.vel0[0]
-		self.vy = self.param.vel0[1]
-		self.vz = self.param.vel0[2]
-		self.phi = self.param.angle0[0]
-		self.theta = self.param.angle0[1]
-		self.psi = self.param.angle0[2]
-		self.p = self.param.pqr0[0]
-		self.q = self.param.pqr0[1]
-		self.r = self.param.pqr0[2]
-
-		self.dt = self.param.dt
 		self.n = 0  # 记录走过的拍数
 		self.time = 0.  # 当前时间
-		self.time_max = self.param.time_max
+
+		self.throttle = self.m * self.g
+		self.torque = np.zeros(3)
+		self.terminal_flag = 0
+
+		self.image = np.ones([self.height, self.width, 3], np.uint8) * 255
+		self.image_copy = self.image.copy()
+
+	def reset_uav_with_param(self, new_param: uav_param):
+		self.m = new_param.m
+		self.g = new_param.g
+		self.J = new_param.J
+		self.d = new_param.d
+		self.CT = new_param.CT
+		self.CM = new_param.CM
+		self.J0 = new_param.J0
+		self.kr = new_param.kr
+		self.kt = new_param.kt
+
+		self.x, self.y, self.z = new_param.pos0
+		self.vx, self.vy, self.vz = new_param.vel0
+		self.phi, self.theta, self.psi = new_param.angle0
+		self.p, self.q, self.r = new_param.pqr0
+
+		self.init_state = np.concatenate((new_param.pos0, new_param.vel0, new_param.angle0, new_param.pos0))
+
+		self.dt = new_param.dt
+		self.n = 0  # 记录走过的拍数
+		self.time = 0.  # 当前时间
+		self.time_max = new_param.time_max
 
 		self.throttle = self.m * self.g  # 油门
 		self.torque = np.array([0., 0., 0.]).astype(float)  # 转矩
 		self.terminal_flag = 0
 
-		self.pos_zone = self.param.pos_zone
-		self.att_zone = self.param.att_zone
-		self.x_min = self.pos_zone[0][0]
-		self.x_max = self.pos_zone[0][1]
-		self.y_min = self.pos_zone[1][0]
-		self.y_max = self.pos_zone[1][1]
-		self.z_min = self.pos_zone[2][0]
-		self.z_max = self.pos_zone[2][1]
+		self.pos_zone = new_param.pos_zone
+		self.att_zone = new_param.att_zone
+		self.x_min, self.x_max = self.pos_zone[0]
+		self.y_min, self.y_max = self.pos_zone[1]
+		self.z_min, self.z_max = self.pos_zone[2]
 
 		self.image = np.ones([self.height, self.width, 3], np.uint8) * 255
 		self.image_copy = self.image.copy()
-
-	def reset_with_param(self, new_param: uav_param):
-		self.param = new_param
-		self.reset_uav()
 
 	def f1(self) -> np.ndarray:
 		"""
