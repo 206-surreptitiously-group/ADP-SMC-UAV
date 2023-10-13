@@ -42,7 +42,7 @@ uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
 uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-3, 3], [-3, 3], [0, 3]])
-uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
+uav_param.att_zone = np.atleast_2d([[deg2rad(-70), deg2rad(70)], [deg2rad(-70), deg2rad(70)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
 
 '''Parameter list of the attitude controller'''
