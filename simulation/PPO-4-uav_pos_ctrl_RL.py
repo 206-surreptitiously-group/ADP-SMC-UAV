@@ -5,6 +5,7 @@ import time
 import cv2 as cv
 import pandas as pd
 import torch
+import matplotlib.pyplot as plt
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
@@ -17,7 +18,7 @@ from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_O
 from common.common_cls import *
 from common.common_func import *
 
-optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/'
+optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train1/'
 show_per = 1
 timestep = 0
 ENV = 'uav_pos_ctrl_RL'
@@ -392,3 +393,10 @@ if __name__ == '__main__':
 				# env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
 				# env_test.show_image(False)
 			print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+			env_test.collector.plot_att()
+			# env_test.collector.plot_pqr()
+			# env_test.collector.plot_torque()
+			env_test.collector.plot_pos()
+			env_test.collector.plot_vel()
+			# env_test.collector.plot_throttle()
+			plt.show()
