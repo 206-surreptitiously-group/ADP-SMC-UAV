@@ -129,22 +129,22 @@ class PPOActorCritic(nn.Module):
 		# 应该是初始化方差，一个动作就一个方差，两个动作就两个方差，std 是标准差
 		self.action_var = torch.full((_action_dim,), _action_std_init * _action_std_init)
 		self.actor = nn.Sequential(
-			nn.Linear(_state_dim, 256),
-			nn.Tanh(),
-			nn.Linear(256, 128),
+			nn.Linear(_state_dim, 128),
 			nn.Tanh(),
 			nn.Linear(128, 64),
 			nn.Tanh(),
-			nn.Linear(64, _action_dim),
-			nn.ReLU()  # 因为是参数优化，所以最后一层用ReLU
+			nn.Linear(64, 32),
+			nn.Tanh(),
+			nn.Linear(32, _action_dim),
+			nn.Tanh()  # 因为是参数优化，所以最后一层用ReLU
 		)
 		# nn.init.orthogonal(self.actor)
 		self.critic = nn.Sequential(
-			nn.Linear(_state_dim, 256),
-			nn.Tanh(),
-			nn.Linear(256, 128),
+			nn.Linear(_state_dim, 128),
 			nn.Tanh(),
 			nn.Linear(128, 64),
+			nn.Tanh(),
+			nn.Linear(64, 64),
 			nn.Tanh(),
 			nn.Linear(64, 1)
 		)
@@ -161,7 +161,7 @@ class PPOActorCritic(nn.Module):
 		nn.init.constant_(self.actor[0].bias, 1e-3)
 		nn.init.orthogonal_(self.actor[2].weight, gain=1.0)
 		nn.init.constant_(self.actor[2].bias, 1e-3)
-		nn.init.orthogonal_(self.actor[4].weight, gain=0.01)
+		nn.init.orthogonal_(self.actor[4].weight, gain=1.0)
 		nn.init.constant_(self.actor[4].bias, 1e-3)
 		nn.init.orthogonal_(self.actor[6].weight, gain=0.01)
 		nn.init.constant_(self.actor[6].bias, 1e-3)
@@ -236,7 +236,7 @@ if __name__ == '__main__':
 	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
 	os.mkdir(simulationPath)
 	c = cv.waitKey(1)
-	TRAIN = False  # 直接训练
+	TRAIN = True  # 直接训练
 	RETRAIN = False  # 基于之前的训练结果重新训练
 	TEST = not TRAIN
 
@@ -249,12 +249,14 @@ if __name__ == '__main__':
 	reset_pos_ctrl_param('optimal')
 	env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 
+	reward_norm = Normalization(dim=1, update=True)
+
 	if TRAIN:
-		action_std_init = 0.6	# 初始探索方差
+		action_std_init = 0.8	# 初始探索方差
 		min_action_std = 0.1	# 最小探索方差
 		max_t_epoch = 1e4		# 最大训练次数
 		t_epoch = 0				# 当前训练次数
-		action_std_decay_freq = int(500)	# 每训练 500 次，减小一次探索方差
+		action_std_decay_freq = int(1500)	# 每训练 1500 次，减小一次探索方差
 		action_std_decay_rate = 0.05  # 每次减小方差的数值
 		test_num = 0
 
@@ -265,6 +267,15 @@ if __name__ == '__main__':
 		# 	{'params': agent.policy.actor.parameters(), 'lr': agent.actor_lr},
 		# 	{'params': agent.policy.critic.parameters(), 'lr': agent.critic_lr}
 		# ])
+		if RETRAIN:
+			print('RELOADING......')
+			policy.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
+			policy_old.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
+
+			'''如果两次奖励函数不一样，那么必须重新初始化 critic'''
+			policy.critic_reset_orthogonal()
+			policy_old.critic_reset_orthogonal()
+			'''如果两次奖励函数不一样，那么必须重新初始化 critic'''
 		'''重新加载Policy网络结构，这是必须的操作'''
 
 		agent = PPO(env=env,
@@ -280,7 +291,8 @@ if __name__ == '__main__':
 					path=simulationPath)
 		agent.PPO_info()
 
-		while t_epoch < max_t_epoch:
+		# while t_epoch < max_t_epoch:
+		while True:
 			'''1. 初始化 buffer 索引和累计奖励记录'''
 			sumr = 0.
 			buffer_index = 0
@@ -296,7 +308,8 @@ if __name__ == '__main__':
 				else:
 					env.current_state = env.next_state.copy()
 					action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 待探索，无梯度
-					env.get_param_from_actor(action_from_actor.detach().cpu().numpy().flatten())  # 将控制器参数更新
+					new_SMC_param = agent.action_linear_trans(action_from_actor.detach().cpu().numpy().flatten())
+					env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
 					action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
 					env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
 					sumr += env.reward
@@ -304,7 +317,7 @@ if __name__ == '__main__':
 					agent.buffer.append(s=env.current_state,
 										a=action_from_actor,  # .cpu().numpy()
 										log_prob=a_log_prob.numpy(),
-										r=env.reward,
+										r=reward_norm(env.reward),
 										sv=s_value.numpy(),
 										done=1.0 if env.is_terminal else 0.0,
 										index=buffer_index)
@@ -330,7 +343,8 @@ if __name__ == '__main__':
 					# print('init state', env_test.uav_state_call_back())
 					while not env_test.is_terminal:
 						_a = agent.evaluate(env_test.current_state)
-						env_test.get_param_from_actor(_a.detach().cpu().numpy().flatten())  # 将控制器参数更新
+						_new_SMC_param = agent.action_linear_trans(_a.detach().cpu().numpy().flatten())
+						env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
 						_a_4_uav = env_test.generate_action_4_uav()
 						env_test.step_update(_a_4_uav)
 						test_r += env_test.reward
@@ -351,10 +365,10 @@ if __name__ == '__main__':
 				# 	average_test_r = agent.agent_evaluate(5)
 				test_num += 1
 				print('...check point save...')
-				temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
-				os.mkdir(temp)
-				time.sleep(0.01)
-				agent.policy_old.save_checkpoint(name='Policy_PPO', path=temp, num=t_epoch)
+				# temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
+				# os.mkdir(temp)
+				# time.sleep(0.01)
+				agent.policy_old.save_checkpoint(name='Policy_PPO', path=simulationPath, num=t_epoch)
 			'''每学习 50 次，保存一下 policy'''
 
 			'''每学习 500 次，减小一次探索方差'''
@@ -383,7 +397,8 @@ if __name__ == '__main__':
 			optimal_param = np.zeros(8)
 			while not env_test.is_terminal:
 				_a = agent.evaluate(env_test.current_state)
-				env_test.get_param_from_actor(_a.detach().cpu().numpy().flatten())  # 将控制器参数更新
+				_new_SMC_param = agent.action_linear_trans(_a.detach().cpu().numpy().flatten())
+				env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
 				_a_4_uav = env_test.generate_action_4_uav()
 				env_test.step_update(_a_4_uav)
 				test_r += env_test.reward

@@ -46,11 +46,13 @@ class PPOActorCritic(nn.Module):
 		nn.init.constant_(self.critic[4].bias, 0)
 
 
-# h
+# hhhhhhhhhhhhhh
 
 if __name__ == '__main__':
-	data = pd.read_csv('./datasave/nets/test_record.csv', header=0).to_numpy()
-	print(data.shape)
-	plt.figure()
-	plt.plot(data[:,0], data[:,1])
-	plt.show()
+	# data = pd.read_csv('./datasave/nets/test_record.csv', header=0).to_numpy()
+	# print(data.shape)
+	# plt.figure()
+	# plt.plot(data[:,0], data[:,1])
+	# plt.show()
+	a = np.array([1, 2, 3, 4, 5, -9, -10, np.pi])
+	print(np.min(a))

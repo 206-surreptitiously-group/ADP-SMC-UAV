@@ -12,15 +12,15 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		rl_base.__init__(self)
 		uav_pos_ctrl.__init__(self, _uav_param, _uav_att_param, _uav_pos_param)
 
-		self.staticGain = 1.0
+		self.staticGain = 2.0
 
 		'''state limitation'''
 		# 并非要求数据一定在这个区间内，只是给一个归一化的系数而已，让 NN 不同维度的数据不要相差太大
 		# 不要出现：某些维度的数据在 [-3, 3]，另外维度在 [0.05, 0.9] 这种情况即可
-		self.e_pos_max = np.array([2., 2., 2.])
-		self.e_pos_min = -np.array([2., 2., 2.])
+		self.e_pos_max = np.array([3., 3., 3.])
+		self.e_pos_min = np.array([-3., -3., -3.])
 		self.e_vel_max = np.array([3., 3., 3.])
-		self.e_vel_min = -np.array([3., 3., 3.])
+		self.e_vel_min = np.array([-3., -3., -3.])
 		'''state limitation'''
 
 		'''rl_base'''
@@ -38,7 +38,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 
 		self.action_dim = 3 + 3 + 1 + 1		# 3 for k1, 3 for k2, 1 for gamma, 1 for lambda
 		self.action_step = [None for _ in range(self.action_dim)]
-		self.action_range = [[0, np.inf] for _ in range(self.action_dim)]		# 滑膜控制器系数只要求大于零，因此 actor 网络最后一层要用 ReLU，而不是 tanh
+		self.action_range = [[0, 3.0] for _ in range(self.action_dim)]
 		self.action_num = [math.inf for _ in range(self.action_dim)]
 		self.action_space = [None for _ in range(self.action_dim)]
 		self.isActionContinuous = [True for _ in range(self.action_dim)]
@@ -46,7 +46,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.current_action = self.initial_action.copy()
 
 		self.reward = 0.
-		self.Q_pos = np.array([1., 1., 1.])			# 位置误差惩罚
+		self.Q_pos = np.array([1., 1., 1.])		# 位置误差惩罚
 		self.Q_vel = np.array([0.01, 0.01, 0.01])	# 速度误差惩罚
 		self.R = np.array([0.00, 0.00, 0.00])	# 期望加速度输出 (即控制输出) 惩罚
 		self.is_terminal = False
@@ -124,6 +124,8 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.get_reward()
 
 	def get_param_from_actor(self, action_from_actor: np.ndarray):
+		if np.min(action_from_actor) < 0:
+			print('ERROR!!!!')
 		for i in range(3):
 			if action_from_actor[i] > 0:
 				self.pos_ctrl.k1[i] = action_from_actor[i]

@@ -21,6 +21,8 @@ class uav_pos_ctrl(UAV):
 		self.att_ref_old = np.zeros(3)
 		self.dot_att_ref = np.zeros(3)
 
+		self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)		# 最大角速度不能超多 60 度 / 秒
+
 		self.obs = np.zeros(3)			# output of the observer
 		self.dis = np.zeros(3)			# external disturbance, known by me, but not the controller
 
@@ -214,6 +216,12 @@ class uav_pos_ctrl(UAV):
 
 		rho_d = np.array([phi_d, theta_d, ref[3]])
 		dot_rho_d = np.array([dot_phi_d, dot_theta_d, dot_ref[3]])
+
+		'''期望角速度限制'''
+		dot_rho_d = np.clip(dot_rho_d, -self.dot_att_ref_limit, self.dot_att_ref_limit)
+		rho_d = rho_d + dot_rho_d * self.dt
+		'''期望角速度限制'''
+
 		torque = self.att_control(rho_d, dot_rho_d, np.zeros(3), att_only=False)
 		action_4_uav = [throttle, torque[0], torque[1], torque[2]]
 
