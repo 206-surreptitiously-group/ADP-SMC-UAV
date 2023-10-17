@@ -21,10 +21,10 @@ class uav_pos_ctrl(UAV):
 		self.att_ref_old = np.zeros(3)
 		self.dot_att_ref = np.zeros(3)
 
-		self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)		# 最大角速度不能超多 60 度 / 秒
+		self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)  # 最大角速度不能超多 60 度 / 秒
 
-		self.obs = np.zeros(3)			# output of the observer
-		self.dis = np.zeros(3)			# external disturbance, known by me, but not the controller
+		self.obs = np.zeros(3)  # output of the observer
+		self.dis = np.zeros(3)  # external disturbance, known by me, but not the controller
 
 		'''参考轨迹记录'''
 		self.ref_amplitude = None
@@ -74,7 +74,7 @@ class uav_pos_ctrl(UAV):
 		self.att_ctrl.control_update(sec_order_att_dy, ctrl_mat, e, de, dot2_ref)
 		return self.att_ctrl.control
 
-	def uo_2_ref_angle_throttle(self, limit = None, att_limitation: bool = False):
+	def uo_2_ref_angle_throttle(self, limit=None, att_limitation: bool = False):
 		ux = self.pos_ctrl.control[0]
 		uy = self.pos_ctrl.control[1]
 		uz = self.pos_ctrl.control[2]
@@ -147,30 +147,30 @@ class uav_pos_ctrl(UAV):
 		@param yaw_fixed:	偏航角固定
 		@return:			None
 		"""
+		center = np.concatenate((np.mean(self.pos_zone, axis=1), [np.mean(self.att_zone[2])]))
 		if is_random:
-			rxy = np.random.uniform(low=0, high=3, size=2)  # 随机生成 xy 方向振幅
-			rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z 方向振幅
-			rpsi = np.random.uniform(low=0, high=np.pi / 3)
-
+			A = np.array([
+				np.random.uniform(low=0, high=self.x_max - center[0]),
+				np.random.uniform(low=0, high=self.y_max - center[1]),
+				np.random.uniform(low=0, high=self.z_max - center[2]),
+				np.random.uniform(low=0, high=self.att_zone[2][1] - center[3])
+			])
 			T = np.random.uniform(low=8, high=10, size=4)  # 随机生成周期
-			phase_xyzpsi = np.random.uniform(low=0, high=np.pi / 2, size=4)
+			phi0 = np.random.uniform(low=0, high=np.pi / 2, size=4)
 		else:
-			rxy = np.array([1.5, 1.5])
-			rz = 0.3
-			rpsi = 0.
+			A = np.array([1.5, 1.5, 0.3, 0.])
 
 			T = np.array([6., 6., 10, 10])
-
-			phase_xyzpsi = np.array([np.pi / 2, 0., 0., 0.])
+			phi0 = np.array([np.pi / 2, 0., 0., 0.])
 
 		if yaw_fixed:
-			rpsi = 0.
-			phase_xyzpsi[3] = 0.
+			A[3] = 0.
+			phi0[3] = 0.
 
-		self.ref_amplitude = np.array([rxy[0], rxy[1], rz, rpsi])  # x y z psi
+		self.ref_amplitude = A
 		self.ref_period = T
-		self.ref_bias_a = np.array([0, 0, 1.5, 0])
-		self.ref_bias_phase = phase_xyzpsi
+		self.ref_bias_a = center
+		self.ref_bias_phase = phi0
 		self.trajectory = self.generate_ref_trajectory(self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
 
 	def generate_random_start_target(self):
@@ -228,19 +228,21 @@ class uav_pos_ctrl(UAV):
 		return action_4_uav
 
 	def reset_uav_pos_ctrl(self,
-						   random_trajectroy: bool = False,
+						   random_trajectory: bool = False,
 						   random_pos0: bool = False,
+						   yaw_fixed: bool = False,
 						   new_att_ctrl_param: fntsmc_param = None,
 						   new_pos_ctrl_parma: fntsmc_param = None):
 		"""
-		@param random_trajectroy:
+		@param yaw_fixed:
+		@param random_trajectory:
 		@param random_pos0:
 		@param new_att_ctrl_param:
 		@param new_pos_ctrl_parma:
 		@return:
 		"""
 		'''1. generate random trajectory'''
-		self.generate_random_trajectory(is_random=random_trajectroy, yaw_fixed=True)
+		self.generate_random_trajectory(is_random=random_trajectory, yaw_fixed=yaw_fixed)
 
 		'''2. reset uav randomly or not'''
 		if random_pos0:

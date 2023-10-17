@@ -119,7 +119,7 @@ if __name__ == '__main__':
     simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
     os.mkdir(simulationPath)
     c = cv.waitKey(1)
-    TRAIN = False  # 直接训练
+    TRAIN = True  # 直接训练
     RETRAIN = False  # 基于之前的训练结果重新训练
     TEST = not TRAIN
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
                     action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
                     env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
                     sumr += env.reward
-
+                    success = 1.0 if env.terminal_flag == 1 else 0.0
                     agent.buffer.append(s=env.current_state,					# s
                                         a=a,									# a
                                         log_prob=a_log_prob,					# a_lp
@@ -200,7 +200,7 @@ if __name__ == '__main__':
                                         r=reward_norm(env.reward),				# 这里使用了奖励归一化
                                         s_=env.next_state,						# s'
                                         done=1.0 if env.is_terminal else 0.0,	# done
-                                        success=0.,                             # success 轨迹跟踪，没有 success 的概念
+                                        success=success,                        # 固定时间内，不出界，就是 success
                                         index=buffer_index						# index
                                         )
 
@@ -218,7 +218,7 @@ if __name__ == '__main__':
                 print('   Training pause......')
                 print('   Testing...')
                 for i in range(n):
-                    reset_pos_ctrl_param('zero')
+                    reset_pos_ctrl_param('optimal')
                     env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                             random_pos0=True,
                                                             new_att_ctrl_param=None,
@@ -226,8 +226,8 @@ if __name__ == '__main__':
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env_test.current_state)
-                        _new_SMC_param = agent.action_linear_trans(_a)
-                        env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                        # _new_SMC_param = agent.action_linear_trans(_a)
+                        # env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                         _a_4_uav = env_test.generate_action_4_uav()
                         env_test.step_update(_a_4_uav)
                         test_r += env_test.reward

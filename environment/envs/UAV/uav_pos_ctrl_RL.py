@@ -87,13 +87,21 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 
 		'''reward for att out!!'''
 		u_extra = 0.
+		if self.terminal_flag == 2:		# 位置出界
+			print('Position out')
+			'''
+				给出界时刻的位置、速度、输出误差的累计
+			'''
+			_n = (self.time_max - self.time) / self.dt
+			u_extra = _n * (u_pos + u_vel + u_acc)
+
 		if self.terminal_flag == 3:
-			print('角度出界了！！')
-			_n = (self.time_max - self.time) / self.dt		# 剩余的步数
-			_e = np.array([self.x_max - self.x_min, self.y_max - self.y_min, self.z_max - self.z_min])
-			u0 = -np.dot(_e ** 2, self.Q_pos) * _n		# 给满位置惩罚
-			u1 = -np.dot(_e_vel ** 2, self.Q_vel) * _n	# 给满速度惩罚
-			u_extra = u0 + u1
+			print('Attitude out')
+			'''
+				给出界时刻的位置、速度、输出误差的累计
+			'''
+			_n = (self.time_max - self.time) / self.dt
+			u_extra = _n * (u_pos + u_vel + u_acc)
 
 		self.reward = u_pos + u_vel + u_acc + u_extra
 
@@ -108,7 +116,17 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		return False
 
 	def is_Terminal(self, param=None):
-		self.is_terminal, self.terminal_flag = self.is_episode_Terminal()
+		self.terminal_flag = self.get_terminal_flag()
+		if self.terminal_flag == 0:		# 普通状态
+			self.is_terminal = False
+		elif self.terminal_flag == 1:	# 超时
+			self.is_terminal = True
+		elif self.terminal_flag == 2:	# 位置
+			self.is_terminal = True
+		elif self.terminal_flag == 3:	# 姿态
+			self.is_terminal = True
+		else:
+			self.is_terminal = False
 
 	def step_update(self, action: list):
 		"""
@@ -139,16 +157,18 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 	def reset_uav_pos_ctrl_RL_tracking(self,
 									   random_trajectroy: bool = False,
 									   random_pos0: bool = False,
+									   yaw_fixed: bool = False,
 									   new_att_ctrl_param: fntsmc_param = None,
 									   new_pos_ctrl_parma: fntsmc_param = None):
 		"""
+		@param yaw_fixed:
 		@param random_trajectroy:
 		@param random_pos0:
 		@param new_att_ctrl_param:
 		@param new_pos_ctrl_parma:
 		@return:
 		"""
-		self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, new_att_ctrl_param, new_pos_ctrl_parma)
+		self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, yaw_fixed, new_att_ctrl_param, new_pos_ctrl_parma)
 
 		'''RL_BASE'''
 		self.initial_state = self.state_norm()
