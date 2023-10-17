@@ -150,9 +150,9 @@ class uav_pos_ctrl(UAV):
 		if is_random:
 			rxy = np.random.uniform(low=0, high=3, size=2)  # 随机生成 xy 方向振幅
 			rz = np.random.uniform(low=0, high=1.5)  # 随机生成 z 方向振幅
-			rpsi = np.random.uniform(low=0, high=np.pi / 2)
+			rpsi = np.random.uniform(low=0, high=np.pi / 3)
 
-			T = np.random.uniform(low=5, high=10, size=4)  # 随机生成周期
+			T = np.random.uniform(low=8, high=10, size=4)  # 随机生成周期
 			phase_xyzpsi = np.random.uniform(low=0, high=np.pi / 2, size=4)
 		else:
 			rxy = np.array([1.5, 1.5])

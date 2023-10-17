@@ -46,8 +46,8 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.current_action = self.initial_action.copy()
 
 		self.reward = 0.
-		self.Q_pos = np.array([1., 1., 1.])		# 位置误差惩罚
-		self.Q_vel = np.array([0.01, 0.01, 0.01])	# 速度误差惩罚
+		self.Q_pos = np.array([5., 5., 5.])		# 位置误差惩罚
+		self.Q_vel = np.array([0.05, 0.05, 0.05])	# 速度误差惩罚
 		self.R = np.array([0.00, 0.00, 0.00])	# 期望加速度输出 (即控制输出) 惩罚
 		self.is_terminal = False
 		self.terminal_flag = 0

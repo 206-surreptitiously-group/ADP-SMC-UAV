@@ -1,11 +1,70 @@
+import torch
+
 from common.common_cls import *
 import cv2 as cv
+from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+import torch.nn.functional as F
 
 """use CPU or GPU"""
 use_cuda = torch.cuda.is_available()
 use_cpu_only = True
 device = torch.device("cpu") if use_cpu_only else torch.device("cuda" if use_cuda else "cpu")
 """use CPU or GPU"""
+
+
+def orthogonal_init(layer, gain=1.0):
+    nn.init.orthogonal_(layer.weight, gain=gain)
+    nn.init.constant_(layer.bias, 0)
+
+
+class PPOActor_Gaussian(nn.Module):
+    def __init__(self, state_dim=3, action_dim=3, use_orthogonal_init: bool = True):
+        super(PPOActor_Gaussian, self).__init__()
+        self.fc1 = nn.Linear(state_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.mean_layer = nn.Linear(64, action_dim)
+        self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
+        self.activate_func = nn.Tanh()
+
+        if use_orthogonal_init:
+            print("------use_orthogonal_init------")
+            orthogonal_init(self.fc1)
+            orthogonal_init(self.fc2)
+            orthogonal_init(self.mean_layer, gain=0.01)
+
+    def forward(self, s):
+        s = self.activate_func(self.fc1(s))
+        s = self.activate_func(self.fc2(s))
+        mean = torch.tanh(self.mean_layer(s))  # [-1, 1]
+        return mean
+
+    def get_dist(self, s):
+        mean = self.forward(s)
+        log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
+        std = torch.exp(log_std)  # The reason we train the 'log_std' is to ensure std=exp(log_std)>0
+        dist = Normal(mean, std)  # Get the Gaussian distribution
+        return dist
+
+
+class PPOCritic(nn.Module):
+    def __init__(self, state_dim=3, use_orthogonal_init: bool = True):
+        super(PPOCritic, self).__init__()
+        self.fc1 = nn.Linear(state_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 1)
+        self.activate_func = nn.Tanh()
+
+        if use_orthogonal_init:
+            print("------use_orthogonal_init------")
+            orthogonal_init(self.fc1)
+            orthogonal_init(self.fc2)
+            orthogonal_init(self.fc3)
+
+    def forward(self, s):
+        s = self.activate_func(self.fc1(s))
+        s = self.activate_func(self.fc2(s))
+        v_s = self.fc3(s)
+        return v_s
 
 
 class Proximal_Policy_Optimization:
@@ -18,20 +77,23 @@ class Proximal_Policy_Optimization:
                  eps_clip: float = 0.2,
                  action_std_init: float = 0.6,
                  buffer_size: int = 1200,
-                 policy: PPOActorCritic = PPOActorCritic(1, 1, 0.1, '', ''),
-                 policy_old: PPOActorCritic = PPOActorCritic(1, 1, 0.1, '', ''),
+                 max_train_steps: int = int(5e6),
+                 actor: PPOActor_Gaussian = PPOActor_Gaussian(),
+                 critic: PPOCritic = PPOCritic(),
                  path: str = ''):
         """
-		@note:
-		@param env:					RL environment
-		@param actor_lr:			actor learning rate
-		@param critic_lr:			critic learning rate
-		@param gamma:				discount factor
-		@param K_epochs:			update policy for K epochs in one PPO update
-		@param eps_clip:			clip parameter for PPO
-		@param action_std_init:		starting std for action distribution (Multivariate Normal)
-		@param path:				path
-		"""
+        @param env:                 the environment
+        @param actor_lr:            actor learning rate
+        @param critic_lr:           critic learning rate
+        @param gamma:               discount factor
+        @param K_epochs:            training times for each leanr()
+        @param eps_clip:            PPO clip for net update
+        @param action_std_init:     exploration std
+        @param buffer_size:         buffer size
+        @param actor:               actor net
+        @param critic:              critic net
+        @param path:                path for data record
+        """
         self.env = env
         '''PPO'''
         self.gamma = gamma  # discount factor
@@ -40,22 +102,33 @@ class Proximal_Policy_Optimization:
         self.action_std = action_std_init
         self.path = path
         self.buffer = RolloutBuffer(buffer_size, self.env.state_dim, self.env.action_dim)
-        self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
+        # self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
         '''PPO'''
 
-        '''networks'''
-        # self.policy = PPOActorCritic(self.env.state_dim, self.env.action_dim, action_std_init, name='PPOActorCritic', chkpt_dir=self.path)
-        # self.policy_old = PPOActorCritic(self.env.state_dim, self.env.action_dim, action_std_init, name='PPOActorCritic_old', chkpt_dir=self.path)
-        self.policy = policy
-        self.policy_old = policy_old
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        '''Trick params'''
+        self.set_adam_eps = True        # PPO recommends eps to be 1e-5
+        self.lamda = 0.95               # gae param
+        self.use_adv_norm = True        # advantage normalization
+        self.mini_batch_size = 64       # 每次学习的时候，从大 batch 里面取的数
+        self.entropy_coef = 0.01        # PPO Entropy coefficient
+        self.use_grad_clip = True       # use_grad_clip
+        self.use_lr_decay = True
+        self.max_train_steps = max_train_steps
+        self.using_mini_batch = False
 
-        self.optimizer = torch.optim.Adam([
-            {'params': self.policy.actor.parameters(), 'lr': self.actor_lr},
-            {'params': self.policy.critic.parameters(), 'lr': self.critic_lr}
-        ])
+        '''networks'''
+        self.actor = actor
+        self.critic = critic
+
+        if self.set_adam_eps:  # Trick 9: set Adam epsilon=1e-5
+            self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=actor_lr, eps=1e-5)
+            self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=critic_lr, eps=1e-5)
+        else:
+            self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
+            self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+
         self.loss = nn.MSELoss()
         self.device = device  # 建议使用 CPU 训练
         '''networks'''
@@ -63,129 +136,115 @@ class Proximal_Policy_Optimization:
         self.episode = 0
         self.reward = 0
 
-    # self.writer = SummaryWriter(path)
-
-    def set_action_std(self, new_action_std):
-        self.action_std = new_action_std
-        self.policy.set_action_std(new_action_std)
-        self.policy_old.set_action_std(new_action_std)
-
-    def decay_action_std(self, action_std_decay_rate, min_action_std):
-        self.action_std = self.action_std - action_std_decay_rate
-        self.action_std = round(self.action_std, 4)
-        if self.action_std <= min_action_std:
-            self.action_std = min_action_std
-            print("setting actor output action_std to min_action_std : ", self.action_std)
-        else:
-            print("setting actor output action_std to : ", self.action_std)
-        self.set_action_std(self.action_std)
-
-    def choose_action_random(self):
-        """
-		:brief:     因为该函数与choose_action并列，所以输出也必须是[-1, 1]之间
-		:return:    random action
-		"""
-        return np.random.uniform(low=-1, high=1, size=self.env.action_dim)
-
-    def choose_action(self, state):
-        with torch.no_grad():
-            t_state = torch.FloatTensor(state).to(device)
-            action, action_log_prob, state_val = self.policy_old.act(t_state)
-
-        return action, t_state, action_log_prob, state_val
-
     def evaluate(self, state):
         with torch.no_grad():
-            t_state = torch.FloatTensor(state).to(self.device)
-            action_mean = self.policy.actor(t_state)
-        return action_mean.detach()
+            t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0).to(self.device)
+            action_mean = self.actor(t_state)
+        return action_mean.detach().cpu().numpy().flatten()
 
-    def agent_evaluate(self, test_num):
-        r = 0
-        for _ in range(test_num):
-            self.env.reset_random()
-            while not self.env.is_terminal:
-                self.env.current_state = self.env.next_state.copy()
-                _action_from_actor = self.evaluate(self.env.current_state)
-                _action = self.action_linear_trans(_action_from_actor.cpu().numpy().flatten())  # 将动作转换到实际范围上
-                self.env.step_update(_action)  # 环境更新的action需要是物理的action
-                r += self.env.reward
-                self.env.show_dynamic_image(isWait=False)  # 画图
-        cv.destroyAllWindows()
-        r /= test_num
-        return r
-
-    def learn(self):
-        """
-		@note: 	 network update
-		@return: None
-		"""
-        '''1. Monte Carlo estimate of returns'''
-        rewards = []
-        discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + self.gamma * discounted_reward
-            rewards.insert(0, discounted_reward)
-
-        '''2. Normalizing the rewards'''
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
-        '''3. convert numpy to tensor'''
+    def choose_action(self, state: np.ndarray):
         with torch.no_grad():
-            old_states = torch.FloatTensor(self.buffer.states).detach().to(self.device)
-            old_actions = torch.FloatTensor(self.buffer.actions).detach().to(self.device)
-            old_log_probs = torch.FloatTensor(self.buffer.log_probs).detach().to(self.device)
-            old_state_values = torch.FloatTensor(self.buffer.state_values).detach().to(self.device)
+            t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0).to(self.device)
+            dist = self.actor.get_dist(t_state)
+            a = dist.sample()  # Sample the action according to the probability distribution
+            a = torch.clamp(a, -1.0, 1.0)  # [-max,max]
+            a_logprob = dist.log_prob(a)  # The log probability density of the action
+        return a.detach().cpu().numpy().flatten(), a_logprob.detach().cpu().numpy().flatten()
 
-        '''4. calculate advantages'''
-        advantages = rewards.detach() - old_state_values.detach()
-
-        '''5. Optimize policy for K epochs'''
-        for _ in range(self.K_epochs):
-            '''5.1 Evaluating old actions and values'''
-            log_probs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
-
-            '''5.2 match state_values tensor dimensions with rewards tensor'''
-            state_values = torch.squeeze(state_values)
-
-            '''5.3 Finding the ratio (pi_theta / pi_theta__old)'''
-            ratios = torch.exp(log_probs - old_log_probs.detach())
-
-            '''5.4 Finding Surrogate Loss'''
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-
-            '''5.5 final loss of clipped objective PPO'''
-            loss = -torch.min(surr1, surr2) + 0.5 * self.loss(state_values, rewards) - 0.01 * dist_entropy
-
-            '''5.6 take gradient step'''
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
-
-        '''6. Copy new weights into old policy'''
-        self.policy_old.load_state_dict(self.policy.state_dict())
-
-    def save_models(self):
-        self.policy.save_checkpoint()
-        self.policy_old.save_checkpoint()
-
-    def save_models_all(self):
-        self.policy.save_all_net()
-        self.policy_old.save_all_net()
-
-    def load_models(self, path):
+    def learn(self, current_steps):
         """
-		:brief:         only for test
-		:param path:    file path
-		:return:
-		"""
-        print('...loading checkpoint...')
-        self.policy.load_state_dict(torch.load(path + 'Policy_ppo'))
-        self.policy_old.load_state_dict(torch.load(path + 'Policy_old_ppo'))
+        @note: 	 network update
+        @return: None
+        """
+        '''前期数据处理'''
+        s, a, a_lp, r, s_, done, success = self.buffer.to_tensor()
+        adv = []
+        gae = 0.
+        with torch.no_grad():
+            vs = self.critic(s)
+            vs_ = self.critic(s_)
+            deltas = r + self.gamma * (1.0 - success) * vs_ - vs
+            for delta, d in zip(reversed(deltas.flatten().numpy()), reversed(done.flatten().numpy())):
+                gae = delta + self.gamma * self.lamda * gae * (1.0 - d)
+                adv.insert(0, gae)
+            adv = torch.tensor(adv, dtype=torch.float).view(-1, 1)
+            v_target = adv + vs
+            if self.use_adv_norm:  # Trick 1:advantage normalization
+                adv = ((adv - adv.mean()) / (adv.std() + 1e-5))
+
+        if self.using_mini_batch:
+            for _ in range(self.K_epochs):      # 每次的轨迹数据学习 K_epochs 次
+                for index in BatchSampler(SubsetRandomSampler(range(self.buffer.batch_size)), self.mini_batch_size, False):
+                    dist_now = self.actor.get_dist(s[index])
+                    dist_entropy = dist_now.entropy().sum(1, keepdim=True)  # shape(mini_batch_size X 1)
+                    a_logprob_now = dist_now.log_prob(a[index])
+
+                    # a/b=exp(log(a)-log(b))  In multi-dimensional continuous action space，we need to sum up the log_prob
+                    ratios = torch.exp(a_logprob_now.sum(1, keepdim=True) - a_lp[index].sum(1, keepdim=True))  # shape(mini_batch_size X 1)
+
+                    surr1 = ratios * adv[index]  # Only calculate the gradient of 'a_logprob_now' in ratios
+                    surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * adv[index]
+                    actor_loss = -torch.min(surr1, surr2) - self.entropy_coef * dist_entropy  # Trick 5: policy entropy
+                    # Update actor
+                    self.optimizer_actor.zero_grad()
+                    actor_loss.mean().backward()
+
+                    if self.use_grad_clip:  # Trick 7: Gradient clip
+                        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
+                    self.optimizer_actor.step()
+
+                    v_s = self.critic(s[index])
+                    critic_loss = F.mse_loss(v_target[index], v_s)
+
+                    # Update critic
+                    self.optimizer_critic.zero_grad()
+                    critic_loss.backward()
+                    if self.use_grad_clip:  # Trick 7: Gradient clip
+                        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
+                    self.optimizer_critic.step()
+        else:
+            for _ in range(self.K_epochs):      # 每次的轨迹数据学习 K_epochs 次
+                dist_now = self.actor.get_dist(s)
+                dist_entropy = dist_now.entropy().sum(1, keepdim=True)  # shape(mini_batch_size X 1)
+                a_logprob_now = dist_now.log_prob(a)
+
+                # a/b=exp(log(a)-log(b))  In multi-dimensional continuous action space，we need to sum up the log_prob
+                ratios = torch.exp(a_logprob_now.sum(1, keepdim=True) - a_lp.sum(1, keepdim=True))  # shape(mini_batch_size X 1)
+
+                surr1 = ratios * adv  # Only calculate the gradient of 'a_logprob_now' in ratios
+                surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * adv
+                actor_loss = -torch.min(surr1, surr2) - self.entropy_coef * dist_entropy  # Trick 5: policy entropy
+                # Update actor
+                self.optimizer_actor.zero_grad()
+                actor_loss.mean().backward()
+
+                if self.use_grad_clip:  # Trick 7: Gradient clip
+                    torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
+                self.optimizer_actor.step()
+
+                v_s = self.critic(s)
+                critic_loss = F.mse_loss(v_target, v_s)
+
+                # Update critic
+                self.optimizer_critic.zero_grad()
+                critic_loss.backward()
+                if self.use_grad_clip:  # Trick 7: Gradient clip
+                    torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
+                self.optimizer_critic.step()
+
+        if self.use_lr_decay:  # Trick 6:learning rate Decay
+            self.lr_decay(current_steps)
+
+    def lr_decay(self, total_steps):
+        if total_steps < self.max_train_steps:
+            lr_a_now = self.actor_lr * (1 - total_steps / self.max_train_steps)
+            lr_c_now = self.critic_lr * (1 - total_steps / self.max_train_steps)
+            lr_a_now = max(lr_a_now, 1e-6)
+            lr_c_now = max(lr_c_now, 1e-6)
+            for p in self.optimizer_actor.param_groups:
+                p['lr'] = lr_a_now
+            for p in self.optimizer_critic.param_groups:
+                p['lr'] = lr_c_now
 
     def PPO_info(self):
         print('agent name：', self.env.name)
@@ -204,3 +263,7 @@ class Proximal_Policy_Optimization:
             b = (maxa + mina) / 2
             linear_action.append(k * a + b)
         return np.array(linear_action)
+
+    def save_ac(self, msg, path):
+        torch.save(self.actor.state_dict(), path + 'actor_' + msg)
+        torch.save(self.critic.state_dict(), path + 'critic_' + msg)

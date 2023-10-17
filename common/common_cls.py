@@ -76,46 +76,59 @@ class RolloutBuffer:
         self.batch_size = batch_size
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.actions = np.zeros((batch_size, action_dim))
-        self.states = np.zeros((batch_size, state_dim))
-        self.log_probs = np.zeros(batch_size)
-        self.rewards = np.zeros(batch_size)
-        self.state_values = np.zeros(batch_size)
-        self.is_terminals = np.zeros(batch_size, dtype=np.float32)
+        self.s = np.zeros((batch_size, state_dim))              # s
+        self.a = np.zeros((batch_size, action_dim))             # a
+        self.a_lp = np.zeros((batch_size, action_dim))                   # a_lp
+        self.r = np.zeros((batch_size, 1))                           # r
+        self.s_ = np.zeros((batch_size, state_dim))             # s'
+        self.done = np.zeros((batch_size, 1))      # done
+        self.success = np.zeros((batch_size, 1))      # success
         self.index = 0
 
-    def append(self, s: np.ndarray, a: np.ndarray, log_prob: float, r: float, sv: float, done: float, index: int):
-        self.actions[index] = a
-        self.states[index] = s
-        self.log_probs[index] = log_prob
-        self.rewards[index] = r
-        self.state_values[index] = sv
-        self.is_terminals[index] = done
+    def append(self, s: np.ndarray, a: np.ndarray, log_prob: np.ndarray, r: float, s_: np.ndarray, done: float, success: float, index: int):
+        self.s[index] = s
+        self.a[index] = a
+        self.a_lp[index] = log_prob
+        self.r[index] = r
+        self.s_[index] = s_
+        self.done[index] = done
+        self.success[index] = success
 
-    def append_traj(self, s: np.ndarray, a: np.ndarray, log_prob: np.ndarray, r: np.ndarray, sv: np.ndarray, done: np.ndarray):
+    def append_traj(self, s: np.ndarray, a: np.ndarray, log_prob: np.ndarray, r: np.ndarray, s_: np.ndarray, done: np.ndarray, success: np.ndarray):
         _l = len(done)
         for i in range(_l):
             if self.index == self.batch_size:
                 self.index = 0
                 return True
             else:
-                self.actions[self.index] = a[i]
-                self.states[self.index] = s[i]
-                self.log_probs[self.index] = log_prob[i]
-                self.rewards[self.index] = r[i]
-                self.state_values[self.index] = sv[i]
-                self.is_terminals[self.index] = done[i]
+                self.s[self.index] = s[i]
+                self.a[self.index] = a[i]
+                self.a_lp[self.index] = log_prob[i]
+                self.r[self.index] = r[i]
+                self.s_[self.index] = s_[i]
+                self.done[self.index] = done[i]
+                self.success[self.index] = success[i]
                 self.index += 1
         return False
 
+    def to_tensor(self):
+        s = torch.tensor(self.s, dtype=torch.float)
+        a = torch.tensor(self.a, dtype=torch.float)
+        a_lp = torch.tensor(self.a_lp, dtype=torch.float)
+        r = torch.tensor(self.r, dtype=torch.float)
+        s_ = torch.tensor(self.s_, dtype=torch.float)
+        done = torch.tensor(self.done, dtype=torch.float)
+        success = torch.tensor(self.success, dtype=torch.float)
+
+        return s, a, a_lp, r, s_, done, success
+
     def print_size(self):
         print('==== RolloutBuffer ====')
-        print('actions: {}'.format(self.actions.size))
-        print('states: {}'.format(self.states.size))
-        print('logprobs: {}'.format(self.log_probs.size))
-        print('rewards: {}'.format(self.rewards.size))
-        print('state_values: {}'.format(self.state_values.size))
-        print('is_terminals: {}'.format(self.is_terminals.size))
+        print('actions: {}'.format(self.a.size))
+        print('states: {}'.format(self.s.size))
+        print('logprobs: {}'.format(self.a_lp.size))
+        print('rewards: {}'.format(self.r.size))
+        print('is_terminals: {}'.format(self.done.size))
         print('==== RolloutBuffer ====')
 
 
@@ -594,15 +607,15 @@ class PPOActorCritic(nn.Module):
         raise NotImplementedError
 
     def act(self, s: torch.Tensor) -> tuple:
-        action_mean = self.actor(s)
-        cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
-        dist = MultivariateNormal(action_mean, cov_mat)  # 多变量高斯分布，均值，方差
+        with torch.no_grad():
+            action_mean = self.actor(s)
+            cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
+            dist = MultivariateNormal(action_mean, cov_mat)  # 多变量高斯分布，均值，方差
+            _a = dist.sample()
+            _a = torch.clamp(_a, -1.0, 1.0)    # _a 是 actor 的采样，规定 actor 的输出被限制在 [-1, 1]
+            action_log_prob = dist.log_prob(_a)
 
-        _a = dist.sample()
-        action_log_prob = dist.log_prob(_a)
-        state_val = self.critic(s)
-
-        return _a.detach(), action_log_prob.detach(), state_val.detach()
+        return _a.detach().cpu().numpy().flatten(), action_log_prob.detach().cpu().numpy().flatten()
 
     def evaluate(self, s, a):
         action_mean = self.actor(s)
@@ -658,10 +671,11 @@ class SharedAdam(torch.optim.Adam):
 
 
 class RunningMeanStd:
-    def __init__(self, dim: int):
+    # Dynamically calculate mean and std
+    def __init__(self, shape):  # shape:the dimension of input data
         self.n = 0
-        self.mean = np.zeros(dim)
-        self.S = np.zeros(dim)
+        self.mean = np.zeros(shape)
+        self.S = np.zeros(shape)
         self.std = np.sqrt(self.S)
 
     def update(self, x):
@@ -678,15 +692,30 @@ class RunningMeanStd:
 
 
 class Normalization:
-    def __init__(self, dim: int, update: bool):
-        self.running_ms = RunningMeanStd(dim=dim)
-        self.update = update
+    def __init__(self, shape):
+        self.running_ms = RunningMeanStd(shape=shape)
 
-    def __call__(self, x):
-        if self.update:
+    def __call__(self, x, update=True):
+        # Whether to update the mean and std,during the evaluating,update=False
+        if update:
             self.running_ms.update(x)
         x = (x - self.running_ms.mean) / (self.running_ms.std + 1e-8)
+
         return x
 
-    def set_update(self, update: bool):
-        self.update = update
+
+class RewardScaling:
+    def __init__(self, shape, gamma):
+        self.shape = shape  # reward shape=1
+        self.gamma = gamma  # discount factor
+        self.running_ms = RunningMeanStd(shape=self.shape)
+        self.R = np.zeros(self.shape)
+
+    def __call__(self, x):
+        self.R = self.gamma * self.R + x
+        self.running_ms.update(self.R)
+        x = x / (self.running_ms.std + 1e-8)  # Only divided std
+        return x
+
+    def reset(self):  # When an episode is done,we should reset 'self.R'
+        self.R = np.zeros(self.shape)
