@@ -15,10 +15,11 @@ from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
 from environment.envs.UAV.FNTSMC import fntsmc_param
 from environment.Color import Color
 from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_Optimization as PPO
+from algorithm.policy_base.Proximal_Policy_Optimization import PPOActor_Gaussian, PPOCritic
 from common.common_cls import *
 from common.common_func import *
 
-optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train1/'
+optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train2/'
 show_per = 1
 timestep = 0
 ENV = 'uav_pos_ctrl_RL'
@@ -90,328 +91,209 @@ pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 
 test_episode = []
 test_reward = []
-
-
-def setup_seed(seed):
-	torch.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed)
-	np.random.seed(seed)
-	random.seed(seed)
-
-
-# setup_seed(3407)
+sumr_list = []
 
 
 def reset_pos_ctrl_param(flag: str):
-	if flag == 'zero':
-		pos_ctrl_param.k1 = 0.01 * np.ones(3)
-		pos_ctrl_param.k2 = 0.01 * np.ones(3)
-		pos_ctrl_param.gamma = 0.01 * np.ones(3)
-		pos_ctrl_param.lmd = 0.01 * np.ones(3)
-	elif flag == 'random':
-		pos_ctrl_param.k1 = np.random.random(3)
-		pos_ctrl_param.k2 = np.random.random(3)
-		pos_ctrl_param.gamma = np.random.random() * np.ones(3)
-		pos_ctrl_param.lmd = np.random.random() * np.ones(3)
-	else:	# optimal
-		pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
-		pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
-		pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
-		pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
-
-
-class PPOActorCritic(nn.Module):
-	def __init__(self, _state_dim, _action_dim, _action_std_init, name='PPOActorCritic', chkpt_dir=''):
-		super(PPOActorCritic, self).__init__()
-		self.checkpoint_file = chkpt_dir + name + '_ppo'
-		self.checkpoint_file_whole_net = chkpt_dir + name + '_ppoALL'
-		self.action_dim = _action_dim
-		# 应该是初始化方差，一个动作就一个方差，两个动作就两个方差，std 是标准差
-		self.action_var = torch.full((_action_dim,), _action_std_init * _action_std_init)
-		self.actor = nn.Sequential(
-			nn.Linear(_state_dim, 128),
-			nn.Tanh(),
-			nn.Linear(128, 64),
-			nn.Tanh(),
-			nn.Linear(64, 32),
-			nn.Tanh(),
-			nn.Linear(32, _action_dim),
-			nn.Tanh()  # 因为是参数优化，所以最后一层用ReLU
-		)
-		# nn.init.orthogonal(self.actor)
-		self.critic = nn.Sequential(
-			nn.Linear(_state_dim, 128),
-			nn.Tanh(),
-			nn.Linear(128, 64),
-			nn.Tanh(),
-			nn.Linear(64, 64),
-			nn.Tanh(),
-			nn.Linear(64, 1)
-		)
-		self.actor_reset_orthogonal()
-		self.critic_reset_orthogonal()
-
-		# self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-		self.device = 'cpu'
-		# torch.cuda.empty_cache()
-		self.to(self.device)
-
-	def actor_reset_orthogonal(self):
-		nn.init.orthogonal_(self.actor[0].weight, gain=1.0)
-		nn.init.constant_(self.actor[0].bias, 1e-3)
-		nn.init.orthogonal_(self.actor[2].weight, gain=1.0)
-		nn.init.constant_(self.actor[2].bias, 1e-3)
-		nn.init.orthogonal_(self.actor[4].weight, gain=1.0)
-		nn.init.constant_(self.actor[4].bias, 1e-3)
-		nn.init.orthogonal_(self.actor[6].weight, gain=0.01)
-		nn.init.constant_(self.actor[6].bias, 1e-3)
-
-	def critic_reset_orthogonal(self):
-		nn.init.orthogonal_(self.critic[0].weight, gain=1.0)
-		nn.init.constant_(self.critic[0].bias, 1e-3)
-		nn.init.orthogonal_(self.critic[2].weight, gain=1.0)
-		nn.init.constant_(self.critic[2].bias, 1e-3)
-		nn.init.orthogonal_(self.critic[4].weight, gain=1.0)
-		nn.init.constant_(self.critic[4].bias, 1e-3)
-		nn.init.orthogonal_(self.critic[6].weight, gain=1.0)
-		nn.init.constant_(self.critic[6].bias, 1e-3)
-
-	def set_action_std(self, new_action_std):
-		self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
-
-	def forward(self):
-		raise NotImplementedError
-
-	def act(self, _s):
-		action_mean = self.actor(_s)  # PPO 给出的是分布，所以这里直接拿出的只能是 mean
-		cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)  # 协方差矩阵
-		dist = MultivariateNormal(action_mean, cov_mat)
-
-		_a = dist.sample()
-		# _a = torch.clip(_a, 0, torch.inf)
-		action_logprob = dist.log_prob(_a)
-		state_val = self.critic(_s)
-
-		return _a.detach(), action_logprob.detach(), state_val.detach()
-
-	def evaluate(self, _s, a):
-		action_mean = self.actor(_s)
-		action_var = self.action_var.expand_as(action_mean)
-		cov_mat = torch.diag_embed(action_var).to(self.device)
-		dist = MultivariateNormal(action_mean, cov_mat)
-
-		# For Single Action Environments.
-		if self.action_dim == 1:
-			a = a.reshape(-1, self.action_dim)
-
-		action_logprobs = dist.log_prob(a)
-		dist_entropy = dist.entropy()
-		state_values = self.critic(_s)
-
-		return action_logprobs, state_values, dist_entropy
-
-	def save_checkpoint(self, name=None, path='', num=None):
-		print('...saving checkpoint...')
-		if name is None:
-			torch.save(self.state_dict(), self.checkpoint_file)
-		else:
-			if num is None:
-				torch.save(self.state_dict(), path + name)
-			else:
-				torch.save(self.state_dict(), path + name + str(num))
-
-	def save_all_net(self):
-		print('...saving all net...')
-		torch.save(self, self.checkpoint_file_whole_net)
-
-	def load_checkpoint(self):
-		print('...loading checkpoint...')
-		self.load_state_dict(torch.load(self.checkpoint_file))
+    if flag == 'zero':
+        pos_ctrl_param.k1 = 0.01 * np.ones(3)
+        pos_ctrl_param.k2 = 0.01 * np.ones(3)
+        pos_ctrl_param.gamma = 0.01 * np.ones(3)
+        pos_ctrl_param.lmd = 0.01 * np.ones(3)
+    elif flag == 'random':
+        pos_ctrl_param.k1 = np.random.random(3)
+        pos_ctrl_param.k2 = np.random.random(3)
+        pos_ctrl_param.gamma = np.random.random() * np.ones(3)
+        pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+    else:	# optimal
+        pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
+        pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
+        pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
+        pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
 
 
 if __name__ == '__main__':
-	log_dir = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/log/'
-	if not os.path.exists(log_dir):
-		os.makedirs(log_dir)
-	simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
-	os.mkdir(simulationPath)
-	c = cv.waitKey(1)
-	TRAIN = True  # 直接训练
-	RETRAIN = False  # 基于之前的训练结果重新训练
-	TEST = not TRAIN
+    log_dir = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/log/'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
+    os.mkdir(simulationPath)
+    c = cv.waitKey(1)
+    TRAIN = False  # 直接训练
+    RETRAIN = False  # 基于之前的训练结果重新训练
+    TEST = not TRAIN
 
-	env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
-	reset_pos_ctrl_param('zero')
-	env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
-	env.show_image(True)
+    env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+    reset_pos_ctrl_param('zero')
+    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
+    env.show_image(True)
 
-	env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
-	reset_pos_ctrl_param('optimal')
-	env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
+    env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+    reset_pos_ctrl_param('optimal')
+    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 
-	reward_norm = Normalization(dim=1, update=True)
+    reward_norm = Normalization(shape=1)
+    reward_scale = RewardScaling(shape=1, gamma=0.99)
 
-	if TRAIN:
-		action_std_init = 0.8	# 初始探索方差
-		min_action_std = 0.1	# 最小探索方差
-		max_t_epoch = 1e4		# 最大训练次数
-		t_epoch = 0				# 当前训练次数
-		action_std_decay_freq = int(1500)	# 每训练 1500 次，减小一次探索方差
-		action_std_decay_rate = 0.05  # 每次减小方差的数值
-		test_num = 0
+    if TRAIN:
+        action_std_init = 0.4	# 初始探索方差
+        min_action_std = 0.05	# 最小探索方差
+        max_train_steps = int(5e6)
+        buffer_size = int(env.time_max / env.dt) * 2
+        K_epochs = 50
+        timestep = 0
+        t_epoch = 0				# 当前训练次数
+        # action_std_decay_freq = int(2500)	# 每训练 若干 次，减小一次探索方差
+        # action_std_decay_rate = 0.05  # 每次减小方差的数值
+        test_num = 0
 
-		'''重新加载Policy网络结构，这是必须的操作'''
-		policy = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy', simulationPath)
-		policy_old = PPOActorCritic(env.state_dim, env.action_dim, action_std_init, 'Policy_old', simulationPath)
-		# optimizer = torch.optim.Adam([
-		# 	{'params': agent.policy.actor.parameters(), 'lr': agent.actor_lr},
-		# 	{'params': agent.policy.critic.parameters(), 'lr': agent.critic_lr}
-		# ])
-		if RETRAIN:
-			print('RELOADING......')
-			policy.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
-			policy_old.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
+        if RETRAIN:
+            print('RELOADING......')
+            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
+            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
 
-			'''如果两次奖励函数不一样，那么必须重新初始化 critic'''
-			policy.critic_reset_orthogonal()
-			policy_old.critic_reset_orthogonal()
-			'''如果两次奖励函数不一样，那么必须重新初始化 critic'''
-		'''重新加载Policy网络结构，这是必须的操作'''
+        agent = PPO(env=env,
+                    actor_lr=1e-4,
+                    critic_lr=1e-3,
+                    gamma=0.99,
+                    K_epochs=K_epochs,
+                    eps_clip=0.2,
+                    action_std_init=action_std_init,
+                    buffer_size=buffer_size,
+                    max_train_steps=max_train_steps,
+                    actor=PPOActor_Gaussian(state_dim=env.state_dim, action_dim=env.action_dim, use_orthogonal_init=True),
+                    critic=PPOCritic(state_dim=env.state_dim, use_orthogonal_init=True),
+                    path=simulationPath)
+        agent.PPO_info()
 
-		agent = PPO(env=env,
-					actor_lr=1e-4,
-					critic_lr=1e-3,
-					gamma=0.99,
-					K_epochs=8,
-					eps_clip=0.2,
-					action_std_init=action_std_init,
-					buffer_size=1024,  # 假设可以包含两条完整的最长时间的轨迹
-					policy=policy,
-					policy_old=policy_old,
-					path=simulationPath)
-		agent.PPO_info()
+        # while t_epoch < max_t_epoch:
+        while True:
+            '''1. 初始化 buffer 索引和累计奖励记录'''
+            sumr = 0.
+            buffer_index = 0
 
-		# while t_epoch < max_t_epoch:
-		while True:
-			'''1. 初始化 buffer 索引和累计奖励记录'''
-			sumr = 0.
-			buffer_index = 0
+            '''2. 重新开始一次收集数据'''
+            while buffer_index < agent.buffer.batch_size:
+                if env.is_terminal:		# 如果某一个回合结束
+                    reset_pos_ctrl_param('zero')
+                    if t_epoch % 10 == 0 and t_epoch > 0:
+                        print('Sumr:  ', sumr)
+                    sumr_list.append(sumr)
+                    sumr = 0.
+                    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
+                                                       random_pos0=True,
+                                                       new_att_ctrl_param=None,
+                                                       new_pos_ctrl_parma=pos_ctrl_param)
+                else:
+                    env.current_state = env.next_state.copy()				# 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
+                    a, a_log_prob = agent.choose_action(env.current_state)  # 加了探索，返回的数都是 .detach().cpu().numpy().flatten() 之后的
+                    new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
+                    env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
+                    action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
+                    env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
+                    sumr += env.reward
 
-			'''2. 重新开始一次收集数据'''
-			while buffer_index < agent.buffer.batch_size:
-				if env.is_terminal:		# 如果某一个回合结束
-					reset_pos_ctrl_param('zero')
-					env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
-													   random_pos0=False,
-													   new_att_ctrl_param=None,
-													   new_pos_ctrl_parma=pos_ctrl_param)
-				else:
-					env.current_state = env.next_state.copy()
-					action_from_actor, s, a_log_prob, s_value = agent.choose_action(env.current_state)  # 待探索，无梯度
-					new_SMC_param = agent.action_linear_trans(action_from_actor.detach().cpu().numpy().flatten())
-					env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
-					action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
-					env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
-					sumr += env.reward
+                    agent.buffer.append(s=env.current_state,					# s
+                                        a=a,									# a
+                                        log_prob=a_log_prob,					# a_lp
+                                        # r=env.reward,							# r
+                                        r=reward_norm(env.reward),				# 这里使用了奖励归一化
+                                        s_=env.next_state,						# s'
+                                        done=1.0 if env.is_terminal else 0.0,	# done
+                                        success=0.,                             # success 轨迹跟踪，没有 success 的概念
+                                        index=buffer_index						# index
+                                        )
 
-					agent.buffer.append(s=env.current_state,
-										a=action_from_actor,  # .cpu().numpy()
-										log_prob=a_log_prob.numpy(),
-										r=reward_norm(env.reward),
-										sv=s_value.numpy(),
-										done=1.0 if env.is_terminal else 0.0,
-										index=buffer_index)
-					buffer_index += 1
+                    buffer_index += 1
 
-			'''3. 开始一次新的学习'''
-			print('~~~~~~~~~~ Training Start~~~~~~~~~~')
-			print('Train Epoch: {}'.format(t_epoch))
-			agent.learn()
+            '''3. 开始一次新的学习'''
+            print('~~~~~~~~~~ Training Start~~~~~~~~~~')
+            print('Train Epoch: {}'.format(t_epoch))
+            timestep += buffer_size
+            agent.learn(timestep)
 
-			'''每学习 10 次，测试一下'''
-			if t_epoch % 10 == 0 and t_epoch > 0:
-				n = 1
-				print('   Training pause......')
-				print('   Testing...')
-				for i in range(n):
-					reset_pos_ctrl_param('zero')
-					env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
-															random_pos0=False,
-															new_att_ctrl_param=None,
-															new_pos_ctrl_parma=pos_ctrl_param)
-					test_r = 0.
-					# print('init state', env_test.uav_state_call_back())
-					while not env_test.is_terminal:
-						_a = agent.evaluate(env_test.current_state)
-						_new_SMC_param = agent.action_linear_trans(_a.detach().cpu().numpy().flatten())
-						env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
-						_a_4_uav = env_test.generate_action_4_uav()
-						env_test.step_update(_a_4_uav)
-						test_r += env_test.reward
-						env_test.image = env_test.image_copy.copy()
-						env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
-						env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
-						env_test.show_image(False)
-					test_num += 1
-					test_reward.append(test_r)
-					print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
-				pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
-				print('   Testing finished...')
-				print('   Go back to training...')
-			'''每学习 10 次，测试一下'''
+            '''每学习 10 次，测试一下'''
+            if t_epoch % 10 == 0 and t_epoch > 0:
+                n = 5
+                print('   Training pause......')
+                print('   Testing...')
+                for i in range(n):
+                    reset_pos_ctrl_param('zero')
+                    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
+                                                            random_pos0=True,
+                                                            new_att_ctrl_param=None,
+                                                            new_pos_ctrl_parma=pos_ctrl_param)
+                    test_r = 0.
+                    while not env_test.is_terminal:
+                        _a = agent.evaluate(env_test.current_state)
+                        _new_SMC_param = agent.action_linear_trans(_a)
+                        env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                        _a_4_uav = env_test.generate_action_4_uav()
+                        env_test.step_update(_a_4_uav)
+                        test_r += env_test.reward
+                        env_test.image = env_test.image_copy.copy()
+                        env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
+                        env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
+                        env_test.show_image(False)
+                    test_num += 1
+                    test_reward.append(test_r)
+                    print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+                pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
+                print('   Testing finished...')
+                print('   Go back to training...')
+            '''每学习 10 次，测试一下'''
 
-			'''每学习 50 次，保存一下 policy'''
-			if t_epoch % 50 == 0 and t_epoch > 0:
-				# 	average_test_r = agent.agent_evaluate(5)
-				test_num += 1
-				print('...check point save...')
-				# temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
-				# os.mkdir(temp)
-				# time.sleep(0.01)
-				agent.policy_old.save_checkpoint(name='Policy_PPO', path=simulationPath, num=t_epoch)
-			'''每学习 50 次，保存一下 policy'''
+            '''每学习 50 次，保存一下 policy'''
+            if t_epoch % 50 == 0 and t_epoch > 0:
+                # 	average_test_r = agent.agent_evaluate(5)
+                test_num += 1
+                print('...check point save...')
+                temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
+                os.mkdir(temp)
+                time.sleep(0.01)
+                agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, agent.episode), path=temp)
+            '''每学习 50 次，保存一下 policy'''
 
-			'''每学习 500 次，减小一次探索方差'''
-			if t_epoch % action_std_decay_freq == 0 and t_epoch > 0:
-				print('......action_std_decay......')
-				agent.decay_action_std(action_std_decay_rate, min_action_std)
-			'''每学习 500 次，减小一次探索方差'''
+            # '''每学习 500 次，减小一次探索方差'''
+            # if t_epoch % action_std_decay_freq == 0 and t_epoch > 0:
+            #     print('......action_std_decay......')
+            #     agent.decay_action_std(action_std_decay_rate, min_action_std)
+            # '''每学习 500 次，减小一次探索方差'''
 
-			t_epoch += 1
-			print('Sumr: %.2f' % (sumr))
-			print('~~~~~~~~~~  Training End ~~~~~~~~~~')
-	else:
-		policy = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy', simulationPath)
-		policy_old = PPOActorCritic(env.state_dim, env.action_dim, 0.6, 'Policy_old', simulationPath)
-		agent = PPO(env=env_test, policy=policy, policy_old=policy_old, path=simulationPath)
-		agent.policy.load_state_dict(torch.load(optPath + 'Policy_PPO2250'))
-		n = 100
-		for i in range(n):
-			reset_pos_ctrl_param('optimal')
-			env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
-													random_pos0=True,
-													new_att_ctrl_param=None,
-													new_pos_ctrl_parma=pos_ctrl_param)
-			env_test.show_image(False)
-			test_r = 0.
-			optimal_param = np.zeros(8)
-			while not env_test.is_terminal:
-				_a = agent.evaluate(env_test.current_state)
-				_new_SMC_param = agent.action_linear_trans(_a.detach().cpu().numpy().flatten())
-				env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
-				_a_4_uav = env_test.generate_action_4_uav()
-				env_test.step_update(_a_4_uav)
-				test_r += env_test.reward
+            t_epoch += 1
+            print('Sumr: %.2f' % sumr)
+            print('~~~~~~~~~~  Training End ~~~~~~~~~~')
+    else:
+        opt_actor = PPOActor_Gaussian(env_test.state_dim, env_test.action_dim, True)
+        opt_actor.load_state_dict(torch.load(optPath + 'actor_trainNum_20500_episode_0'))       # 测试时，填入测试actor网络
+        agent = PPO(env=env_test, actor=opt_actor, path=simulationPath)
+        n = 20
+        for i in range(n):
+            reset_pos_ctrl_param('optimal')
+            env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
+                                                    random_pos0=True,
+                                                    new_att_ctrl_param=None,
+                                                    new_pos_ctrl_parma=pos_ctrl_param)
+            env_test.show_image(False)
+            test_r = 0.
+            optimal_param = np.zeros(8)
+            while not env_test.is_terminal:
+                _a = agent.evaluate(env_test.current_state)
+                _new_SMC_param = agent.action_linear_trans(_a)
+                env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                _a_4_uav = env_test.generate_action_4_uav()
+                env_test.step_update(_a_4_uav)
+                test_r += env_test.reward
 
-				# env_test.image = env_test.image_copy.copy()
-				# env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
-				# env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
-				# env_test.show_image(False)
-			print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
-			env_test.collector.plot_att()
-			# env_test.collector.plot_pqr()
-			# env_test.collector.plot_torque()
-			env_test.collector.plot_pos()
-			env_test.collector.plot_vel()
-			# env_test.collector.plot_throttle()
-			plt.show()
+                env_test.image = env_test.image_copy.copy()
+                env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
+                env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
+                env_test.show_image(False)
+            print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+            env_test.collector.plot_att()
+            # env_test.collector.plot_pqr()
+            # env_test.collector.plot_torque()
+            env_test.collector.plot_pos()
+            env_test.collector.plot_vel()
+            # env_test.collector.plot_throttle()
+            plt.show()
