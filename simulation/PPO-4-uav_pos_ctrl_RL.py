@@ -179,6 +179,7 @@ if __name__ == '__main__':
                     if t_epoch % 10 == 0 and t_epoch > 0:
                         print('Sumr:  ', sumr)
                     sumr_list.append(sumr)
+                    pd.DataFrame({'sumr_list': sumr_list}).to_csv(simulationPath + 'sumr_list.csv')
                     sumr = 0.
                     env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                        random_pos0=True,
@@ -218,7 +219,7 @@ if __name__ == '__main__':
                 print('   Training pause......')
                 print('   Testing...')
                 for i in range(n):
-                    reset_pos_ctrl_param('optimal')
+                    reset_pos_ctrl_param('zero')
                     env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                             random_pos0=True,
                                                             new_att_ctrl_param=None,
@@ -226,8 +227,8 @@ if __name__ == '__main__':
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env_test.current_state)
-                        # _new_SMC_param = agent.action_linear_trans(_a)
-                        # env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                        _new_SMC_param = agent.action_linear_trans(_a)
+                        env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                         _a_4_uav = env_test.generate_action_4_uav()
                         env_test.step_update(_a_4_uav)
                         test_r += env_test.reward
@@ -265,9 +266,10 @@ if __name__ == '__main__':
             print('~~~~~~~~~~  Training End ~~~~~~~~~~')
     else:
         opt_actor = PPOActor_Gaussian(env_test.state_dim, env_test.action_dim, True)
-        opt_actor.load_state_dict(torch.load(optPath + 'actor_trainNum_20500_episode_0'))       # 测试时，填入测试actor网络
+        opt_actor.load_state_dict(torch.load(optPath + 'optimal_actor'))       # 测试时，填入测试actor网络
         agent = PPO(env=env_test, actor=opt_actor, path=simulationPath)
-        n = 20
+        n = 10
+        opt_SMC_para = np.atleast_2d(np.zeros(8))
         for i in range(n):
             reset_pos_ctrl_param('optimal')
             env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
@@ -280,6 +282,7 @@ if __name__ == '__main__':
             while not env_test.is_terminal:
                 _a = agent.evaluate(env_test.current_state)
                 _new_SMC_param = agent.action_linear_trans(_a)
+                opt_SMC_para = np.insert(opt_SMC_para, opt_SMC_para.shape[0], _new_SMC_param, axis=0)
                 env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                 _a_4_uav = env_test.generate_action_4_uav()
                 env_test.step_update(_a_4_uav)
@@ -290,6 +293,8 @@ if __name__ == '__main__':
                 env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
                 env_test.show_image(False)
             print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+            # pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
+            env_test.collector.package2file(simulationPath)
             env_test.collector.plot_att()
             # env_test.collector.plot_pqr()
             # env_test.collector.plot_torque()

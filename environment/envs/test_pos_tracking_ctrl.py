@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     while cnt < NUM_OF_SIMULATION:
         '''生成新的参考轨迹的信息'''
-        pos_ctrl.reset_uav_pos_ctrl(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
+        pos_ctrl.reset_uav_pos_ctrl(random_trajectory=False, random_pos0=True, yaw_fixed=False, new_att_ctrl_param=None, new_pos_ctrl_parma=None)
         pos_ctrl.show_image(True)
 
         if cnt % 1 == 0:
