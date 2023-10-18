@@ -8,7 +8,6 @@ import pandas as pd
 import torch
 import matplotlib.pyplot as plt
 
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 
@@ -89,7 +88,6 @@ pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
 
-
 test_episode = []
 test_reward = []
 sumr_list = []
@@ -106,7 +104,7 @@ def reset_pos_ctrl_param(flag: str):
         pos_ctrl_param.k2 = np.random.random(3)
         pos_ctrl_param.gamma = np.random.random() * np.ones(3)
         pos_ctrl_param.lmd = np.random.random() * np.ones(3)
-    else:	# optimal
+    else:  # optimal
         pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
         pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
         pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
@@ -120,7 +118,7 @@ if __name__ == '__main__':
     simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
     os.mkdir(simulationPath)
     c = cv.waitKey(1)
-    TRAIN = False  # 直接训练
+    TRAIN = True  # 直接训练
     RETRAIN = False  # 基于之前的训练结果重新训练
     TEST = not TRAIN
 
@@ -137,13 +135,13 @@ if __name__ == '__main__':
     reward_scale = RewardScaling(shape=1, gamma=0.99)
 
     if TRAIN:
-        action_std_init = 0.4	# 初始探索方差
-        min_action_std = 0.05	# 最小探索方差
+        action_std_init = 0.4  # 初始探索方差
+        min_action_std = 0.05  # 最小探索方差
         max_train_steps = int(5e6)
         buffer_size = int(env.time_max / env.dt) * 2
         K_epochs = 50
         timestep = 0
-        t_epoch = 0				# 当前训练次数
+        t_epoch = 0  # 当前训练次数
         # action_std_decay_freq = int(2500)	# 每训练 若干 次，减小一次探索方差
         # action_std_decay_rate = 0.05  # 每次减小方差的数值
         test_num = 0
@@ -152,6 +150,10 @@ if __name__ == '__main__':
             print('RELOADING......')
             '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
             '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
+
+        # _state = np.atleast_2d(np.zeros(env.state_dim))
+        # _action = np.atleast_2d(np.zeros(env.action_dim))
+        # _state_norm = np.atleast_2d(np.zeros(env.state_dim))
 
         agent = PPO(env=env,
                     actor_lr=1e-4,
@@ -179,7 +181,7 @@ if __name__ == '__main__':
 
             '''2. 重新开始一次收集数据'''
             while buffer_index < agent.buffer.batch_size:
-                if env.is_terminal:		# 如果某一个回合结束
+                if env.is_terminal:  # 如果某一个回合结束
                     reset_pos_ctrl_param('zero')
                     if t_epoch % 10 == 0 and t_epoch > 0:
                         print('Sumr:  ', sumr)
@@ -191,26 +193,31 @@ if __name__ == '__main__':
                                                        new_att_ctrl_param=None,
                                                        new_pos_ctrl_parma=pos_ctrl_param)
                 else:
-                    env.current_state = env.next_state.copy()				# 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
+                    env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
                     a, a_log_prob = agent.choose_action(env.current_state)  # 加了探索，返回的数都是 .detach().cpu().numpy().flatten() 之后的
                     # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
                     new_SMC_param = a.copy()
                     env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
-                    action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
+                    action_4_uav = env.generate_action_4_uav()  # 生成无人机物理控制量
                     env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
                     sumr += env.reward
                     success = 1.0 if env.terminal_flag == 1 else 0.0
                     agent.buffer.append(s=env.current_state_norm(env.current_state, update=True),
-                                        a=a,									# a
-                                        log_prob=a_log_prob,					# a_lp
+                                        a=a,  # a
+                                        log_prob=a_log_prob,  # a_lp
                                         # r=env.reward,							# r
-                                        r=reward_norm(env.reward),				# 这里使用了奖励归一化
+                                        r=reward_norm(env.reward),  # 这里使用了奖励归一化
                                         s_=env.next_state_norm(env.next_state, update=True),
-                                        done=1.0 if env.is_terminal else 0.0,	# done
-                                        success=success,                        # 固定时间内，不出界，就是 success
-                                        index=buffer_index						# index
+                                        done=1.0 if env.is_terminal else 0.0,  # done
+                                        success=success,  # 固定时间内，不出界，就是 success
+                                        index=buffer_index  # index
                                         )
                     buffer_index += 1
+                    # _state = np.insert(_state, _state.shape[0], env.current_state, axis=0)
+                    # _state_norm = np.insert(_state_norm,
+                    #                         _state_norm.shape[0],
+                    #                         env.current_state_norm(env.current_state, update=False), axis=0)
+                    # _action = np.insert(_action, _action.shape[0], new_SMC_param, axis=0)
 
             '''3. 开始一次新的学习'''
             print('~~~~~~~~~~ Training Start~~~~~~~~~~')
@@ -260,6 +267,16 @@ if __name__ == '__main__':
                 time.sleep(0.01)
                 agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, agent.episode), path=temp)
                 env.save_state_norm(temp)
+                # if t_epoch % 100 == 0:
+                #     (pd.DataFrame(_state,
+                #                   columns=['ex', 'ey', 'ez', 'evx', 'evy', 'evz']).
+                #      to_csv(simulationPath + '_state.csv', sep=',', index=False))
+                #     (pd.DataFrame(_state_norm,
+                #                   columns=['ex', 'ey', 'ez', 'evx', 'evy', 'evz']).
+                #      to_csv(simulationPath + '_state_norm.csv', sep=',', index=False))
+                #     (pd.DataFrame(_action,
+                #                   columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
+                #      to_csv(simulationPath + '_action.csv', sep=',', index=False))
             '''每学习 50 次，保存一下 policy'''
 
             t_epoch += 1
@@ -271,7 +288,7 @@ if __name__ == '__main__':
                                       a_min=np.array(env_test.action_range)[:, 0],
                                       a_max=np.array(env_test.action_range)[:, 1],
                                       use_orthogonal_init=True)
-        opt_actor.load_state_dict(torch.load(optPath + 'optimal_actor'))       # 测试时，填入测试actor网络
+        opt_actor.load_state_dict(torch.load(optPath + 'optimal_actor'))  # 测试时，填入测试actor网络
         agent = PPO(env=env_test, actor=opt_actor, path=simulationPath)
         n = 1
         opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
@@ -300,7 +317,7 @@ if __name__ == '__main__':
             print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
             # print(opt_SMC_para.shape)
             (pd.DataFrame(opt_SMC_para,
-                         columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
+                          columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
              to_csv(simulationPath + 'opt_smc_param.csv', sep=',', index=False))
 
             env_test.collector.package2file(simulationPath)

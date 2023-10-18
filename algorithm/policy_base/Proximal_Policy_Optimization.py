@@ -158,7 +158,7 @@ class Proximal_Policy_Optimization:
             t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0).to(self.device)
             dist = self.actor.get_dist(t_state)
             a = dist.sample()  # Sample the action according to the probability distribution
-            a = torch.clamp(a, self.actor.a_min, self.actor.a_max)  # [min, max]
+            a = torch.maximum(torch.minimum(a, self.actor.a_max), self.actor.a_min)     # bounded to [min, max]
             a_logprob = dist.log_prob(a)  # The log probability density of the action
         return a.detach().cpu().numpy().flatten(), a_logprob.detach().cpu().numpy().flatten()
 
