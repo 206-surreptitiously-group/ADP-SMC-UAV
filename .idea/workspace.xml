@@ -8,7 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/draft.py" beforeDir="false" afterPath="$PROJECT_DIR$/draft.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

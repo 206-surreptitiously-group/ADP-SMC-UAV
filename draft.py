@@ -8,7 +8,7 @@ import cv2 as cv
 import pandas
 import torch.nn as nn
 import argparse
-from torch.distributions import Normal
+from torch.distributions import Normal, MultivariateNormal
 
 
 if __name__ == '__main__':
@@ -29,13 +29,13 @@ if __name__ == '__main__':
 	# plt.plot(data[i1: i2, 0], data[i1: i2, 1])
 	# plt.show()
 
-	std = torch.tensor([0.2, 1, 0], dtype=torch.float)
-	mean = torch.ones(3)
-	# print(mean)
-	# print(std)
-	# std.expand_as(mean)
-	# print(std)
-	print(mean.size())
-	print(std.size())
+	std = 0.7
+	mean = torch.tensor([-10, 0, 10, 20, 30, 40, 50, 60], dtype=torch.float)
+	var = torch.full((8,), std * std)
+	cov_mat = torch.diag(var).unsqueeze(dim=0)
+	dist = MultivariateNormal(mean, cov_mat)
 	dist = Normal(mean, std)
-	print(dist.sample())
+	a = dist.sample()
+	log = dist.log_prob(a)
+	print(log)
+	# print(dist.sample())

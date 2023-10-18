@@ -57,12 +57,14 @@ class PPOActor_Gaussian(nn.Module):
 
     def get_dist(self, s):
         mean = self.forward(s)
-        var = torch.full((self.action_dim,), self.std * self.std, dtype=torch.float)
-        cov_mat = torch.diag(var).unsqueeze(dim=0)
-        # log_std = self.log_std.expand_as(mean)
-        # std = torch.exp(log_std)
-        # dist = Normal(mean, std)
-        dist = MultivariateNormal(mean, cov_mat)
+        mean = torch.tensor(mean, dtype=torch.float)
+        # var = torch.full((self.action_dim,), self.std * self.std, dtype=torch.float)
+        # cov_mat = torch.diag(var).unsqueeze(dim=0)
+        # # log_std = self.log_std.expand_as(mean)
+        # # std = torch.exp(log_std)
+        # # dist = Normal(mean, std)
+        # dist = MultivariateNormal(mean, cov_mat)
+        dist = Normal(mean, self.std)
         return dist
 
 
@@ -228,7 +230,7 @@ class Proximal_Policy_Optimization:
                 a_logprob_now = dist_now.log_prob(a)
 
                 # a/b=exp(log(a)-log(b))  In multi-dimensional continuous action space，we need to sum up the log_prob
-                ratios = torch.exp(a_logprob_now.sum(1, keepdim=True) - a_lp.sum(1, keepdim=True))  # shape(mini_batch_size X 1)
+                ratios = torch.exp(a_logprob_now.sum(1, keepdim=True) - a_lp.sum(1, keepdim=True))
 
                 surr1 = ratios * adv  # Only calculate the gradient of 'a_logprob_now' in ratios
                 surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * adv
