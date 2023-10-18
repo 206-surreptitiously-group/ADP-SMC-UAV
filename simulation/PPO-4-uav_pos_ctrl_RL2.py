@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../")
 
-from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
+from environment.envs.UAV.uav_pos_ctrl_RL2 import uav_pos_ctrl_RL2, uav_param
 from environment.envs.UAV.FNTSMC import fntsmc_param
 from environment.Color import Color
 from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_Optimization as PPO
@@ -124,12 +124,12 @@ if __name__ == '__main__':
     RETRAIN = False  # 基于之前的训练结果重新训练
     TEST = not TRAIN
 
-    env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+    env = uav_pos_ctrl_RL2(uav_param, att_ctrl_param, pos_ctrl_param)
     reset_pos_ctrl_param('zero')
     env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
     env.show_image(True)
 
-    env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
+    env_test = uav_pos_ctrl_RL2(uav_param, att_ctrl_param, pos_ctrl_param)
     reset_pos_ctrl_param('optimal')
     env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 
@@ -162,7 +162,11 @@ if __name__ == '__main__':
                     action_std_init=action_std_init,
                     buffer_size=buffer_size,
                     max_train_steps=max_train_steps,
-                    actor=PPOActor_Gaussian(state_dim=env.state_dim, action_dim=env.action_dim, use_orthogonal_init=True),
+                    actor=PPOActor_Gaussian(state_dim=env.state_dim,
+                                            action_dim=env.action_dim,
+                                            a_min=np.array(env.action_range)[:, 0],
+                                            a_max=np.array(env.action_range)[:, 1],
+                                            use_orthogonal_init=True),
                     critic=PPOCritic(state_dim=env.state_dim, use_orthogonal_init=True),
                     path=simulationPath)
         agent.PPO_info()
@@ -189,23 +193,23 @@ if __name__ == '__main__':
                 else:
                     env.current_state = env.next_state.copy()				# 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
                     a, a_log_prob = agent.choose_action(env.current_state)  # 加了探索，返回的数都是 .detach().cpu().numpy().flatten() 之后的
-                    new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
+                    # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
+                    new_SMC_param = a.copy()
                     env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
                     action_4_uav = env.generate_action_4_uav()	# 生成无人机物理控制量
                     env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
                     sumr += env.reward
                     success = 1.0 if env.terminal_flag == 1 else 0.0
-                    agent.buffer.append(s=env.current_state,					# s
+                    agent.buffer.append(s=env.current_state_norm(env.current_state, update=True),
                                         a=a,									# a
                                         log_prob=a_log_prob,					# a_lp
                                         # r=env.reward,							# r
                                         r=reward_norm(env.reward),				# 这里使用了奖励归一化
-                                        s_=env.next_state,						# s'
+                                        s_=env.next_state_norm(env.next_state, update=True),
                                         done=1.0 if env.is_terminal else 0.0,	# done
                                         success=success,                        # 固定时间内，不出界，就是 success
                                         index=buffer_index						# index
                                         )
-
                     buffer_index += 1
 
             '''3. 开始一次新的学习'''
@@ -227,8 +231,9 @@ if __name__ == '__main__':
                                                             new_pos_ctrl_parma=pos_ctrl_param)
                     test_r = 0.
                     while not env_test.is_terminal:
-                        _a = agent.evaluate(env_test.current_state)
-                        _new_SMC_param = agent.action_linear_trans(_a)
+                        _a = agent.evaluate(env.current_state_norm(env_test.current_state, update=False))
+                        # _new_SMC_param = agent.action_linear_trans(_a)
+                        _new_SMC_param = _a.copy()
                         env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                         _a_4_uav = env_test.generate_action_4_uav()
                         env_test.step_update(_a_4_uav)
@@ -254,23 +259,22 @@ if __name__ == '__main__':
                 os.mkdir(temp)
                 time.sleep(0.01)
                 agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, agent.episode), path=temp)
+                env.save_state_norm(temp)
             '''每学习 50 次，保存一下 policy'''
-
-            # '''每学习 500 次，减小一次探索方差'''
-            # if t_epoch % action_std_decay_freq == 0 and t_epoch > 0:
-            #     print('......action_std_decay......')
-            #     agent.decay_action_std(action_std_decay_rate, min_action_std)
-            # '''每学习 500 次，减小一次探索方差'''
 
             t_epoch += 1
             print('Sumr: %.2f' % sumr)
             print('~~~~~~~~~~  Training End ~~~~~~~~~~')
     else:
-        opt_actor = PPOActor_Gaussian(env_test.state_dim, env_test.action_dim, True)
+        opt_actor = PPOActor_Gaussian(state_dim=env_test.state_dim,
+                                      action_dim=env_test.action_dim,
+                                      a_min=np.array(env_test.action_range)[:, 0],
+                                      a_max=np.array(env_test.action_range)[:, 1],
+                                      use_orthogonal_init=True)
         opt_actor.load_state_dict(torch.load(optPath + 'optimal_actor'))       # 测试时，填入测试actor网络
         agent = PPO(env=env_test, actor=opt_actor, path=simulationPath)
         n = 1
-        opt_SMC_para = np.atleast_2d(np.zeros(8))
+        opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
         for i in range(n):
             reset_pos_ctrl_param('optimal')
             env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
@@ -281,8 +285,8 @@ if __name__ == '__main__':
             test_r = 0.
             while not env_test.is_terminal:
                 _a = agent.evaluate(env_test.current_state)
-                _new_SMC_param = agent.action_linear_trans(_a)
-
+                # _new_SMC_param = agent.action_linear_trans(_a)
+                _new_SMC_param = _a.copy()
                 opt_SMC_para = np.insert(opt_SMC_para, opt_SMC_para.shape[0], _new_SMC_param, axis=0)
                 env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                 _a_4_uav = env_test.generate_action_4_uav()

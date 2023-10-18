@@ -18,13 +18,23 @@ def orthogonal_init(layer, gain=1.0):
 
 
 class PPOActor_Gaussian(nn.Module):
-    def __init__(self, state_dim=3, action_dim=3, use_orthogonal_init: bool = True):
+    def __init__(self,
+                 state_dim=3,
+                 action_dim=3,
+                 a_min=np.zeros(3),
+                 a_max=np.ones(3),
+                 use_orthogonal_init: bool = True):
         super(PPOActor_Gaussian, self).__init__()
         self.fc1 = nn.Linear(state_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.mean_layer = nn.Linear(64, action_dim)
         self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
         self.activate_func = nn.Tanh()
+        self.a_min = torch.tensor(a_min)
+        self.a_max = torch.tensor(a_max)
+        self.off = (self.a_min + self.a_max) / 2.0
+        self.gain = self.a_max - self.off
+        # self.std = 0.7
 
         if use_orthogonal_init:
             print("------use_orthogonal_init------")
@@ -35,7 +45,7 @@ class PPOActor_Gaussian(nn.Module):
     def forward(self, s):
         s = self.activate_func(self.fc1(s))
         s = self.activate_func(self.fc2(s))
-        mean = torch.tanh(self.mean_layer(s))  # [-1, 1]
+        mean = torch.tanh(self.mean_layer(s)) * self.gain + self.off
         return mean
 
     def get_dist(self, s):
@@ -43,6 +53,7 @@ class PPOActor_Gaussian(nn.Module):
         log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
         std = torch.exp(log_std)  # The reason we train the 'log_std' is to ensure std=exp(log_std)>0
         dist = Normal(mean, std)  # Get the Gaussian distribution
+        # dist = Normal(mean, self.std)
         return dist
 
 
@@ -147,7 +158,7 @@ class Proximal_Policy_Optimization:
             t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0).to(self.device)
             dist = self.actor.get_dist(t_state)
             a = dist.sample()  # Sample the action according to the probability distribution
-            a = torch.clamp(a, -1.0, 1.0)  # [-max,max]
+            a = torch.clamp(a, self.actor.a_min, self.actor.a_max)  # [min, max]
             a_logprob = dist.log_prob(a)  # The log probability density of the action
         return a.detach().cpu().numpy().flatten(), a_logprob.detach().cpu().numpy().flatten()
 

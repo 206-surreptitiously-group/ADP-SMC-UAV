@@ -6,6 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algorithm/actor_critic/Twin_Delayed_DDPG.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/actor_critic/Twin_Delayed_DDPG.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algorithm/rl_base/rl_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/rl_base/rl_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/common_cls.py" beforeDir="false" afterPath="$PROJECT_DIR$/common/common_cls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/draft.py" beforeDir="false" afterPath="$PROJECT_DIR$/draft.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/yyf.csv" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,33 +49,11 @@
   "keyToString": {
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "last_opened_file_path": "/home/yefeng/yefengGithub/ADP-SMC-UAV",
+    "last_opened_file_path": "/home/yefeng/yefengGithub/ADP-SMC-UAV/simulation/TD3-4-uav_pos_ctrl_RL.py",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.PPO-4-uav_pos_ctrl_RL">
-    <configuration name="PPO-4-FAS" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="Python 3.8" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-4-FAS.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.TD3-4-uav_pos_ctrl_RL">
     <configuration name="PPO-4-uav_pos_ctrl_RL" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="ADP-SMC-UAV" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -82,6 +68,28 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TD3-4-uav_pos_ctrl_RL" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="ADP-SMC-UAV" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.8" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/TD3-4-uav_pos_ctrl_RL.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -112,56 +120,10 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_pos_setpoint_ctrl" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="Python 3.8" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/environment/envs/test_pos_setpoint_ctrl.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="test_pos_tracking_ctrl" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="Python 3.8" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/environment/envs/test_pos_tracking_ctrl.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <list>
       <item itemvalue="Python.PPO-4-uav_pos_ctrl_RL" />
       <item itemvalue="Python.draft" />
-      <item itemvalue="Python.PPO-4-FAS" />
-      <item itemvalue="Python.test_pos_setpoint_ctrl" />
-      <item itemvalue="Python.test_pos_tracking_ctrl" />
+      <item itemvalue="Python.TD3-4-uav_pos_ctrl_RL" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />

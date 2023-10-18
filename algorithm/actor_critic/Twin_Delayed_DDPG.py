@@ -21,6 +21,7 @@ class Twin_Delayed_DDPG:
                  actor_soft_update: float = 1e-2,
                  memory_capacity: int = 5000,
                  batch_size: int = 64,
+                 use_grad_clip:bool = False,
                  actor: Actor = Actor(),
                  target_actor: Actor = Actor(),
                  critic1: Critic = Critic(),
@@ -62,6 +63,7 @@ class Twin_Delayed_DDPG:
         self.actor_tau = actor_soft_update
         self.memory = ReplayBuffer(memory_capacity, batch_size, self.env.state_dim, self.env.action_dim)
         self.path = path
+        self.use_grad_clip = use_grad_clip
         '''Twin-Delay-DDPG'''
 
         '''network'''
@@ -203,6 +205,8 @@ class Twin_Delayed_DDPG:
         critic_loss = func.mse_loss(target1, critic_value1)
         critic_loss.backward()
         self.critic1.optimizer.step()
+        if self.use_grad_clip:
+            torch.nn.utils.clip_grad_norm_(self.critic1.parameters(), 0.5)  # TODO
         '''critic1 training'''
 
         '''critic2 training'''
@@ -211,6 +215,8 @@ class Twin_Delayed_DDPG:
         critic_loss = func.mse_loss(target2, critic_value2)
         critic_loss.backward()
         self.critic2.optimizer.step()
+        if self.use_grad_clip:
+            torch.nn.utils.clip_grad_norm_(self.critic1.parameters(), 0.5)  # TODO
         '''critic2 training'''
 
         self.policy_delay_iter += 1
@@ -240,6 +246,8 @@ class Twin_Delayed_DDPG:
             actor_loss = torch.mean(actor_loss)
             actor_loss.backward()
             self.actor.optimizer.step()
+            if self.use_grad_clip:
+                torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)  # TODO
         '''actor training, choose critic1 or critic2 randomly'''
 
         self.update_network_parameters()
@@ -268,43 +276,13 @@ class Twin_Delayed_DDPG:
                     target_param.data.copy_(
                         target_param.data * (1.0 - self.critic2_tau) + param.data * self.critic2_tau)
 
-    def save_models(self):
-        self.actor.save_checkpoint()
-        self.critic1.save_checkpoint()
-        self.critic2.save_checkpoint()
-        self.target_actor.save_checkpoint()
-        self.target_critic1.save_checkpoint()
-        self.target_critic2.save_checkpoint()
-
-    def save_models_all(self):
-        self.actor.save_all_net()
-        self.critic1.save_all_net()
-        self.critic2.save_all_net()
-        self.target_actor.save_all_net()
-        self.target_critic1.save_all_net()
-        self.target_critic2.save_all_net()
-
-    def load_models(self, path):
-        """
-        :brief:         only for test
-        :param path:    file path
-        :return:
-        """
-        print('...loading checkpoint...')
-        self.actor.load_state_dict(torch.load(path + 'Actor_ddpg'))
-        self.target_actor.load_state_dict(torch.load(path + 'TargetActor_ddpg'))
-        self.critic1.load_state_dict(torch.load(path + 'Critic1_ddpg'))
-        self.target_critic1.load_state_dict(torch.load(path + 'TargetCritic1_ddpg'))
-        self.critic2.load_state_dict(torch.load(path + 'Critic2_ddpg'))
-        self.target_critic2.load_state_dict(torch.load(path + 'TargetCritic2_ddpg'))
-
-    def load_actor_optimal(self, path, file):
-        print('...loading optimal...')
-        self.actor.load_state_dict(torch.load(path + file))
-
-    def load_target_actor_optimal(self, path, file):
-        print('...loading optimal...')
-        self.target_actor.load_state_dict(torch.load(path + file))
+    def save_nets(self, msg, path):
+        torch.save(self.actor.state_dict(), path + 'actor_' + msg)
+        torch.save(self.target_actor.state_dict(), path + 'target_actor_' + msg)
+        torch.save(self.critic1.state_dict(), path + 'critic1_' + msg)
+        torch.save(self.target_critic1.state_dict(), path + 'target_critic1_' + msg)
+        torch.save(self.critic2.state_dict(), path + 'critic2_' + msg)
+        torch.save(self.target_critic2.state_dict(), path + 'target_critic2_' + msg)
 
     def TD3_info(self):
         print('agent name：', self.env.name)

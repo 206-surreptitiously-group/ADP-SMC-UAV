@@ -112,7 +112,7 @@ class rl_base:
         Generally speaking, the range should not be infinite although it is mathematical-reasonable.
         """
 
-        self.initial_state = []
+        # self.initial_state = []
         self.initial_action = []
         self.current_state = []
         self.next_state = []

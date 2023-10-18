@@ -11,7 +11,7 @@ import argparse
 
 
 if __name__ == '__main__':
-	# data = pd.read_csv('./simulation/test_record.csv', header=0).to_numpy()
+	# data = pd.read_csv('./simulation/test_record_TD3.csv', header=0).to_numpy()
 	# r = data[:, 1]
 	# print(r.shape)
 	# print(np.max(r))
@@ -27,10 +27,15 @@ if __name__ == '__main__':
 	# plt.figure()
 	# plt.plot(data[i1: i2, 0], data[i1: i2, 1])
 	# plt.show()
-	optimal_SMC_params = np.atleast_2d(np.zeros(8))
-	for i in range(10):
-		optimal_SMC_params = np.insert(optimal_SMC_params, optimal_SMC_params.shape[0], (i + 1) * np.ones(8), axis=0)
-	# print(optimal_SMC_params)
-	(pd.DataFrame(data=optimal_SMC_params,
-				 columns={'k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'})
-	 .to_csv('yyf.csv', sep=',', index=False))
+
+	data = {
+		'cur_n': 1*np.ones(5),
+		'cur_mean': 2*np.ones(5),
+		'cur_std': 3*np.ones(5),
+		'cur_S': 4*np.ones(5),
+		'next_n': 5*np.ones(5),
+		'next_mean': 6*np.ones(5),
+		'next_std': 7*np.ones(5),
+		'next_S': 8*np.ones(5),
+	}
+	pd.DataFrame(data).to_csv('state_norm.csv', index=False)

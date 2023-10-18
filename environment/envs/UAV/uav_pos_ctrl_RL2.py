@@ -5,9 +5,11 @@ import math
 import numpy as np
 from ref_cmd import *
 from environment.Color import Color
+from common.common_cls import Normalization
+import pandas as pd
 
 
-class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
+class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
 	def __init__(self, _uav_param: uav_param, _uav_att_param: fntsmc_param, _uav_pos_param: fntsmc_param):
 		rl_base.__init__(self)
 		uav_pos_ctrl.__init__(self, _uav_param, _uav_att_param, _uav_pos_param)
@@ -32,9 +34,11 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.state_range = [[-self.staticGain, self.staticGain] for _ in range(self.state_dim)]
 		self.isStateContinuous = [True for _ in range(self.state_dim)]
 
-		self.initial_state = self.state_norm()
-		self.current_state = self.initial_state.copy()
-		self.next_state = self.initial_state.copy()
+		self.current_state_norm = Normalization(self.state_dim)
+		self.next_state_norm = Normalization(self.state_dim)
+
+		self.current_state = np.zeros(self.state_dim)
+		self.next_state = np.zeros(self.state_dim)
 
 		self.action_dim = 3 + 3 + 1 + 1		# 3 for k1, 3 for k2, 1 for gamma, 1 for lambda
 		self.action_step = [None for _ in range(self.action_dim)]
@@ -42,8 +46,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.action_num = [math.inf for _ in range(self.action_dim)]
 		self.action_space = [None for _ in range(self.action_dim)]
 		self.isActionContinuous = [True for _ in range(self.action_dim)]
-		self.initial_action = [0.0 for _ in range(self.action_dim)]
-		self.current_action = self.initial_action.copy()
+		self.current_action = [0.0 for _ in range(self.action_dim)]
 
 		self.reward = 0.
 		self.Q_pos = np.array([1., 1., 1.])		# 位置误差惩罚
@@ -53,28 +56,22 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		self.terminal_flag = 0
 		'''rl_base'''
 
-	def state_norm(self) -> np.ndarray:
-		e_pos_norm = (self.uav_pos() - self.pos_ref) / (self.e_pos_max - self.e_pos_min) * self.staticGain
-		e_vel_norm = (self.uav_vel() - self.dot_pos_ref) / (self.e_vel_max - self.e_vel_min) * self.staticGain
-
-		norm_state = np.concatenate((e_pos_norm, e_vel_norm))
+	def get_state(self) -> np.ndarray:
+		e_pos_ = self.uav_pos() - self.pos_ref
+		e_vel_ = self.uav_vel() - self.dot_pos_ref
+		norm_state = np.concatenate((e_pos_, e_vel_))
 		return norm_state
-
-	def inverse_state_norm(self) -> np.ndarray:
-		inverse_e_pos_norm = self.current_state[0:3] / self.staticGain * (self.e_pos_max - self.e_pos_min)
-		inverse_e_vel_norm = self.current_state[3:6] / self.staticGain * (self.e_vel_max - self.e_vel_min)
-
-		inverse_norm_state = np.concatenate((inverse_e_pos_norm, inverse_e_vel_norm))
-		return inverse_norm_state
 
 	def get_reward(self, param=None):
 		"""
 		@param param:
 		@return:
 		"""
-		ss = self.inverse_state_norm()
-		_e_pos = ss[0: 3]
-		_e_vel = ss[3: 6]
+		# ss = self.inverse_state_norm()
+		# _e_pos = ss[0: 3]
+		# _e_vel = ss[3: 6]
+		_e_pos = self.uav_pos() - self.pos_ref
+		_e_vel = self.uav_vel() - self.dot_pos_ref
 
 		'''reward for position error'''
 		u_pos = -np.dot(_e_pos ** 2, self.Q_pos)
@@ -134,11 +131,11 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		@return:
 		"""
 		self.current_action = np.array(action)
-		self.current_state = self.state_norm()
+		self.current_state = self.get_state()
 
 		self.update(action=self.current_action)
 		self.is_Terminal()
-		self.next_state = self.state_norm()
+		self.next_state = self.get_state()
 		self.get_reward()
 
 	def get_param_from_actor(self, action_from_actor: np.ndarray):
@@ -170,14 +167,24 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		"""
 		self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, yaw_fixed, new_att_ctrl_param, new_pos_ctrl_parma)
 
-
-
 		'''RL_BASE'''
-		self.initial_state = self.state_norm()
-		self.current_state = self.initial_state.copy()
-		self.next_state = self.initial_state.copy()
+		self.current_state = self.get_state()
+		self.next_state = self.get_state()
 		self.current_action = self.initial_action.copy()
 		self.reward = 0.
 		self.is_terminal = False
 		self.terminal_flag = 0
 		'''RL_BASE'''
+
+	def save_state_norm(self, path):
+		data = {
+			'cur_n': self.current_state_norm.running_ms.n * np.ones(self.state_dim),
+			'cur_mean': self.current_state_norm.running_ms.mean,
+			'cur_std': self.current_state_norm.running_ms.std,
+			'cur_S': self.current_state_norm.running_ms.S,
+			'next_n': self.next_state_norm.running_ms.n * np.ones(self.state_dim),
+			'next_mean': self.next_state_norm.running_ms.mean,
+			'next_std': self.next_state_norm.running_ms.std,
+			'next_S': self.next_state_norm.running_ms.S,
+		}
+		pd.DataFrame(data).to_csv(path+'state_norm.csv', index=False)
