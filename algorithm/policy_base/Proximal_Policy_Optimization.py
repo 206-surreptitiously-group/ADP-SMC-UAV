@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from common.common_cls import *
@@ -19,16 +20,18 @@ def orthogonal_init(layer, gain=1.0):
 
 class PPOActor_Gaussian(nn.Module):
     def __init__(self,
-                 state_dim=3,
-                 action_dim=3,
-                 a_min=np.zeros(3),
-                 a_max=np.ones(3),
+                 state_dim: int = 3,
+                 action_dim: int = 3,
+                 a_min: np.ndarray = np.zeros(3),
+                 a_max: np.ndarray = np.ones(3),
+                 init_std: float = 0.5,
                  use_orthogonal_init: bool = True):
         super(PPOActor_Gaussian, self).__init__()
         self.fc1 = nn.Linear(state_dim, 64)
         self.fc2 = nn.Linear(64, 64)
         self.mean_layer = nn.Linear(64, action_dim)
-        self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
+        # self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
+        self.log_std = nn.Parameter(np.log(init_std) * torch.ones(action_dim))  # We use 'nn.Parameter' to train log_std automatically
         self.activate_func = nn.Tanh()
         self.a_min = torch.tensor(a_min)
         self.a_max = torch.tensor(a_max)
@@ -119,12 +122,12 @@ class Proximal_Policy_Optimization:
         '''PPO'''
 
         '''Trick params'''
-        self.set_adam_eps = True        # PPO recommends eps to be 1e-5
-        self.lamda = 0.95               # gae param
-        self.use_adv_norm = True        # advantage normalization
-        self.mini_batch_size = 64       # 每次学习的时候，从大 batch 里面取的数
-        self.entropy_coef = 0.01        # PPO Entropy coefficient
-        self.use_grad_clip = True       # use_grad_clip
+        self.set_adam_eps = True  # PPO recommends eps to be 1e-5
+        self.lamda = 0.95  # gae param
+        self.use_adv_norm = True  # advantage normalization
+        self.mini_batch_size = 64  # 每次学习的时候，从大 batch 里面取的数
+        self.entropy_coef = 0.01  # PPO Entropy coefficient
+        self.use_grad_clip = True  # use_grad_clip
         self.use_lr_decay = True
         self.max_train_steps = max_train_steps
         self.using_mini_batch = False
@@ -158,7 +161,7 @@ class Proximal_Policy_Optimization:
             t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0).to(self.device)
             dist = self.actor.get_dist(t_state)
             a = dist.sample()  # Sample the action according to the probability distribution
-            a = torch.maximum(torch.minimum(a, self.actor.a_max), self.actor.a_min)     # bounded to [min, max]
+            a = torch.maximum(torch.minimum(a, self.actor.a_max), self.actor.a_min)  # bounded to [min, max]
             a_logprob = dist.log_prob(a)  # The log probability density of the action
         return a.detach().cpu().numpy().flatten(), a_logprob.detach().cpu().numpy().flatten()
 
@@ -184,7 +187,7 @@ class Proximal_Policy_Optimization:
                 adv = ((adv - adv.mean()) / (adv.std() + 1e-5))
 
         if self.using_mini_batch:
-            for _ in range(self.K_epochs):      # 每次的轨迹数据学习 K_epochs 次
+            for _ in range(self.K_epochs):  # 每次的轨迹数据学习 K_epochs 次
                 for index in BatchSampler(SubsetRandomSampler(range(self.buffer.batch_size)), self.mini_batch_size, False):
                     dist_now = self.actor.get_dist(s[index])
                     dist_entropy = dist_now.entropy().sum(1, keepdim=True)  # shape(mini_batch_size X 1)
@@ -214,7 +217,7 @@ class Proximal_Policy_Optimization:
                         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
                     self.optimizer_critic.step()
         else:
-            for _ in range(self.K_epochs):      # 每次的轨迹数据学习 K_epochs 次
+            for _ in range(self.K_epochs):  # 每次的轨迹数据学习 K_epochs 次
                 dist_now = self.actor.get_dist(s)
                 dist_entropy = dist_now.entropy().sum(1, keepdim=True)  # shape(mini_batch_size X 1)
                 a_logprob_now = dist_now.log_prob(a)

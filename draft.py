@@ -40,9 +40,10 @@ if __name__ == '__main__':
 	# }
 	# pd.DataFrame(data).to_csv('state_norm.csv', index=False)
 
-	a = 10 * torch.randn(6)
-	a1 = 3 * torch.ones(6)
-	a2 = 8 * torch.ones(6)
-	b = torch.maximum(torch.minimum(a, a2), a1)
-	print(a)
-	print(b)
+	# a = 10 * torch.randn(6)
+	# a1 = 3 * torch.ones(6)
+	# a2 = 8 * torch.ones(6)
+	# b = torch.maximum(torch.minimum(a, a2), a1)
+	# print(a)
+	# print(b)
+	log_std = nn.Parameter(np.log(0.5) * torch.ones(8))
