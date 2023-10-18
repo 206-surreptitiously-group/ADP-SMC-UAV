@@ -1,10 +1,10 @@
-import numpy as np
 import torch
 
 from common.common_cls import *
-import cv2 as cv
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 import torch.nn.functional as F
+from torch.distributions import MultivariateNormal
+
 
 """use CPU or GPU"""
 use_cuda = torch.cuda.is_available()
@@ -27,45 +27,51 @@ class PPOActor_Gaussian(nn.Module):
                  init_std: float = 0.5,
                  use_orthogonal_init: bool = True):
         super(PPOActor_Gaussian, self).__init__()
-        self.fc1 = nn.Linear(state_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.mean_layer = nn.Linear(64, action_dim)
+        self.fc1 = nn.Linear(state_dim, 8)
+        self.fc2 = nn.Linear(8, 16)
+        self.fc3 = nn.Linear(16, 8)
+        self.mean_layer = nn.Linear(8, action_dim)
         # self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
-        self.log_std = nn.Parameter(np.log(init_std) * torch.ones(action_dim))  # We use 'nn.Parameter' to train log_std automatically
+        # self.log_std = nn.Parameter(np.log(init_std) * torch.ones(action_dim))  # We use 'nn.Parameter' to train log_std automatically
         self.activate_func = nn.Tanh()
         self.a_min = torch.tensor(a_min)
         self.a_max = torch.tensor(a_max)
         self.off = (self.a_min + self.a_max) / 2.0
         self.gain = self.a_max - self.off
-        # self.std = 0.7
+        self.action_dim = action_dim
+        self.std = init_std
 
         if use_orthogonal_init:
             print("------use_orthogonal_init------")
             orthogonal_init(self.fc1)
             orthogonal_init(self.fc2)
+            orthogonal_init(self.fc3)
             orthogonal_init(self.mean_layer, gain=0.01)
 
     def forward(self, s):
         s = self.activate_func(self.fc1(s))
         s = self.activate_func(self.fc2(s))
+        s = self.activate_func(self.fc3(s))
         mean = torch.tanh(self.mean_layer(s)) * self.gain + self.off
         return mean
 
     def get_dist(self, s):
         mean = self.forward(s)
-        log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
-        std = torch.exp(log_std)  # The reason we train the 'log_std' is to ensure std=exp(log_std)>0
-        dist = Normal(mean, std)  # Get the Gaussian distribution
-        # dist = Normal(mean, self.std)
+        var = torch.full((self.action_dim,), self.std * self.std, dtype=torch.float)
+        cov_mat = torch.diag(var).unsqueeze(dim=0)
+        # log_std = self.log_std.expand_as(mean)
+        # std = torch.exp(log_std)
+        # dist = Normal(mean, std)
+        dist = MultivariateNormal(mean, cov_mat)
         return dist
 
 
 class PPOCritic(nn.Module):
     def __init__(self, state_dim=3, use_orthogonal_init: bool = True):
         super(PPOCritic, self).__init__()
-        self.fc1 = nn.Linear(state_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 1)
+        self.fc1 = nn.Linear(state_dim, 8)
+        self.fc2 = nn.Linear(8, 16)
+        self.fc3 = nn.Linear(16, 1)
         self.activate_func = nn.Tanh()
 
         if use_orthogonal_init:
@@ -147,8 +153,7 @@ class Proximal_Policy_Optimization:
         self.device = device  # 建议使用 CPU 训练
         '''networks'''
 
-        self.episode = 0
-        self.reward = 0
+        self.cnt = 0
 
     def evaluate(self, state):
         with torch.no_grad():

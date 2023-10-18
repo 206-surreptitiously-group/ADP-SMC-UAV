@@ -179,10 +179,12 @@ if __name__ == '__main__':
             '''1. 初始化 buffer 索引和累计奖励记录'''
             sumr = 0.
             buffer_index = 0
+            episode = 0
 
             '''2. 重新开始一次收集数据'''
             while buffer_index < agent.buffer.batch_size:
                 if env.is_terminal:  # 如果某一个回合结束
+                    episode += 1
                     reset_pos_ctrl_param('zero')
                     if t_epoch % 10 == 0 and t_epoch > 0:
                         print('Sumr:  ', sumr)
@@ -225,6 +227,7 @@ if __name__ == '__main__':
             print('Train Epoch: {}'.format(t_epoch))
             timestep += buffer_size
             agent.learn(timestep)
+            agent.cnt += 1
 
             '''每学习 10 次，测试一下'''
             if t_epoch % 10 == 0 and t_epoch > 0:
@@ -258,15 +261,21 @@ if __name__ == '__main__':
                 print('   Go back to training...')
             '''每学习 10 次，测试一下'''
 
+            '''每学习 100 次，减小一次探索概率'''
+            if t_epoch % 100 == 0 and t_epoch > 0:
+                agent.actor.std -= 0.05
+                agent.actor.std = max(agent.actor.std, 0.1)
+            '''每学习 100 次，减小一次探索概率'''
+
             '''每学习 50 次，保存一下 policy'''
             if t_epoch % 50 == 0 and t_epoch > 0:
                 # 	average_test_r = agent.agent_evaluate(5)
                 test_num += 1
                 print('...check point save...')
-                temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, agent.episode)
+                temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, episode)
                 os.mkdir(temp)
                 time.sleep(0.01)
-                agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, agent.episode), path=temp)
+                agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, episode), path=temp)
                 env.save_state_norm(temp)
                 # if t_epoch % 100 == 0:
                 #     (pd.DataFrame(_state,
