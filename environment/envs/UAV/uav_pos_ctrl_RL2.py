@@ -50,8 +50,8 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
 
         self.reward = 0.
         self.Q_pos = np.array([1., 1., 1.])  # 位置误差惩罚
-        self.Q_vel = np.array([0.1, 0.1, 0.1])  # 速度误差惩罚
-        self.R = np.array([0.1, 0.1, 0.1])  # 期望加速度输出 (即控制输出) 惩罚
+        self.Q_vel = np.array([0.05, 0.05, 0.05])  # 速度误差惩罚
+        self.R = np.array([0.01, 0.01, 0.01])  # 期望加速度输出 (即控制输出) 惩罚
         self.is_terminal = False
         self.terminal_flag = 0
         '''rl_base'''
@@ -85,7 +85,7 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
         '''reward for att out!!'''
         u_extra = 0.
         if self.terminal_flag == 2:  # 位置出界
-            print('Position out')
+            # print('Position out')
             '''
 				给出界时刻的位置、速度、输出误差的累计
 			'''
@@ -99,6 +99,15 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
 			'''
             _n = (self.time_max - self.time) / self.dt
             u_extra = _n * (u_pos + u_vel + u_acc)
+
+        # if u_pos >0:
+        #     print('1')
+        # if u_vel >0:
+        #     print('2')
+        # if u_acc >0:
+        #     print('3')
+        # if u_extra > 0:
+        #     print('4', u_extra)
 
         self.reward = u_pos + u_vel + u_acc + u_extra
 
@@ -119,9 +128,9 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
         elif self.terminal_flag == 1:  # 超时
             self.is_terminal = True
         elif self.terminal_flag == 2:  # 位置
-            self.is_terminal = False
+            self.is_terminal = True
         elif self.terminal_flag == 3:  # 姿态
-            self.is_terminal = False
+            self.is_terminal = True
         else:
             self.is_terminal = False
 
@@ -150,6 +159,25 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
             self.pos_ctrl.gamma[:] = action_from_actor[6]  # gamma gamma gamma
         if action_from_actor[7] > 0:
             self.pos_ctrl.lmd[:] = action_from_actor[7]  # lmd lmd lmd
+
+    def get_param_from_actor_4_state_decouple(self, action_from_actor: np.ndarray):
+        '''
+        @param action_from_actor:
+        @return:
+        '''
+        '''
+            k11 k21 k12 k22 k13 k23 gamma lambda
+        '''
+        if np.min(action_from_actor) < 0:
+            print('ERROR!!!!')
+        self.pos_ctrl.k1[0] = action_from_actor[0]
+        self.pos_ctrl.k1[1] = action_from_actor[2]
+        self.pos_ctrl.k1[2] = action_from_actor[4]
+        self.pos_ctrl.k2[0] = action_from_actor[1]
+        self.pos_ctrl.k2[1] = action_from_actor[3]
+        self.pos_ctrl.k2[2] = action_from_actor[5]
+        self.pos_ctrl.gamma[:] = action_from_actor[6]  # gamma gamma gamma
+        self.pos_ctrl.lmd[:] = action_from_actor[7]  # lmd lmd lmd
 
     def reset_uav_pos_ctrl_RL_tracking(self,
                                        random_trajectroy: bool = False,
