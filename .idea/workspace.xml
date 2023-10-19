@@ -5,6 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/common_cls.py" beforeDir="false" afterPath="$PROJECT_DIR$/common/common_cls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/draft.py" beforeDir="false" afterPath="$PROJECT_DIR$/draft.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL2.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" afterDir="false" />
     </list>
@@ -43,7 +47,7 @@
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "/home/yefeng/yefengGithub/ReinforcementLearning",
+    "last_opened_file_path": "/home/yefeng/yefengGithub/ADP-SMC-UAV",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
@@ -129,6 +133,15 @@
     <servers />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py</url>
+          <line>190</line>
+          <option name="timeStamp" value="21" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="self.x" language="Python" />

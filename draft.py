@@ -12,7 +12,7 @@ from torch.distributions import Normal, MultivariateNormal
 
 
 if __name__ == '__main__':
-	data = pd.read_csv('./datasave/nets/Train_opt/sumr_list.csv', header=0).to_numpy()
+	data = pd.read_csv('./datasave/nets/train_opt2/test_record.csv', header=0).to_numpy()
 	r = data[:, 1]
 	print(r.shape)
 	print(np.max(r))
@@ -28,3 +28,10 @@ if __name__ == '__main__':
 	plt.figure()
 	plt.plot(data[i1: i2, 0], data[i1: i2, 1])
 	plt.show()
+
+	# data = np.atleast_2d([np.ones(4), 2 * np.ones(4), 3 * np.ones(4), 4 * np.ones(4)])
+	# print(data)
+	# for _d in data:
+	# 	_d *= 2
+	# 	print(_d)
+	# print(data)

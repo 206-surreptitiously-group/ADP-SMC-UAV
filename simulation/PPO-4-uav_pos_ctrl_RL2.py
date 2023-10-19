@@ -144,11 +144,6 @@ if __name__ == '__main__':
         # action_std_decay_rate = 0.05  # 每次减小方差的数值
         test_num = 0
 
-        if RETRAIN:
-            print('RELOADING......')
-            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
-            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
-
         agent = PPO(env=env,
                     actor_lr=1e-4,
                     critic_lr=1e-3,
@@ -162,22 +157,30 @@ if __name__ == '__main__':
                                             action_dim=env.action_dim,
                                             a_min=np.array(env.action_range)[:, 0],
                                             a_max=np.array(env.action_range)[:, 1],
-                                            init_std=0.5,
+                                            init_std=0.5,       # 第2次学是 0.3
                                             use_orthogonal_init=True),
                     critic=PPOCritic(state_dim=env.state_dim, use_orthogonal_init=True),
                     path=simulationPath)
         agent.PPO_info()
 
+        if RETRAIN:
+            print('RELOADING......')
+            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
+            optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train_opt/trainNum_300_episode_2/'
+            agent.actor.load_state_dict(torch.load(optPath + 'actor_trainNum_300_episode_2'))  # 测试时，填入测试actor网络
+            agent.critic.init(True)
+            '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
+
         while True:
             '''1. 初始化 buffer 索引和累计奖励记录'''
             sumr = 0.
             buffer_index = 0
-            episode = 0
+            agent.buffer2.clean()
+            '''1. 初始化 buffer 索引和累计奖励记录'''
 
             '''2. 重新开始一次收集数据'''
             while buffer_index < agent.buffer.batch_size:
                 if env.is_terminal:  # 如果某一个回合结束
-                    episode += 1
                     reset_pos_ctrl_param('zero')
                     if t_epoch % 10 == 0 and t_epoch > 0:
                         print('Sumr:  ', sumr)
@@ -190,12 +193,12 @@ if __name__ == '__main__':
                                                        new_pos_ctrl_parma=pos_ctrl_param)
                 else:
                     env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
-                    a, a_log_prob = agent.choose_action(env.current_state)  # 加了探索，返回的数都是 .detach().cpu().numpy().flatten() 之后的
+                    a, a_log_prob = agent.choose_action(env.current_state)
                     # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
                     new_SMC_param = a.copy()
-                    env.get_param_from_actor(new_SMC_param)  # 将控制器参数更新
-                    action_4_uav = env.generate_action_4_uav()  # 生成无人机物理控制量
-                    env.step_update(action_4_uav)  # 环境更新的 action 需要是物理的 action
+                    env.get_param_from_actor(new_SMC_param)
+                    action_4_uav = env.generate_action_4_uav()
+                    env.step_update(action_4_uav)
                     sumr += env.reward
                     success = 1.0 if env.terminal_flag == 1 else 0.0
                     agent.buffer.append(s=env.current_state_norm(env.current_state, update=True),
@@ -209,15 +212,81 @@ if __name__ == '__main__':
                                         index=buffer_index  # index
                                         )
                     buffer_index += 1
+            '''2. 重新开始一次收集数据'''
+
+            # '''2. 重新开始一次收集数据'''
+            # NUM_OF_TRAJ = 2
+            # num_of_traj = 0
+            # traj_s = np.atleast_2d([]).astype(np.float32)
+            # traj_a = np.atleast_2d([]).astype(np.float32)
+            # traj_a_lp = np.atleast_2d([]).astype(np.float32)
+            # traj_r = np.atleast_2d([]).astype(np.float32)
+            # traj_s_ = np.atleast_2d([]).astype(np.float32)
+            # traj_done = np.atleast_2d([]).astype(np.float32)
+            # traj_success = np.atleast_2d([]).astype(np.float32)
+            #
+            # while num_of_traj < NUM_OF_TRAJ:
+            #     if env.is_terminal:  # 如果某一个回合结束
+            #         # if env.terminal_flag == 2 or env.terminal_flag == 3:
+            #         if False:
+            #             print('Bad data, sumr:  ', sumr)
+            #         else:
+            #             traj_s, traj_s_ = env.state_norm_batch(traj_s, traj_s_)
+            #             agent.buffer2.append_traj(traj_s, traj_a, traj_a_lp, traj_r, traj_s_, traj_done, traj_success)
+            #             print('Add trajectory, sumr:  ', sumr)
+            #             num_of_traj += 1
+            #
+            #         reset_pos_ctrl_param('zero')
+            #         sumr_list.append(sumr)
+            #         pd.DataFrame({'sumr_list': sumr_list}).to_csv(simulationPath + 'sumr_list.csv')
+            #         sumr = 0.
+            #         env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
+            #                                            random_pos0=True,
+            #                                            new_att_ctrl_param=None,
+            #                                            new_pos_ctrl_parma=pos_ctrl_param)
+            #         traj_s = np.atleast_2d([]).astype(np.float32)
+            #         traj_a = np.atleast_2d([]).astype(np.float32)
+            #         traj_a_lp = np.atleast_2d([]).astype(np.float32)
+            #         traj_r = np.atleast_2d([]).astype(np.float32)
+            #         traj_s_ = np.atleast_2d([]).astype(np.float32)
+            #         traj_done = np.atleast_2d([]).astype(np.float32)
+            #         traj_success = np.atleast_2d([]).astype(np.float32)
+            #     else:
+            #         env.current_state = env.next_state.copy()
+            #         a, a_log_prob = agent.choose_action(env.current_state)
+            #         new_SMC_param = a.copy()
+            #         env.get_param_from_actor(new_SMC_param)
+            #         action_4_uav = env.generate_action_4_uav()
+            #         env.step_update(action_4_uav)
+            #         sumr += env.reward
+            #         success = 1.0 if env.terminal_flag == 1 else 0.0
+            #         if len(traj_s[0]) == 0:
+            #             traj_s = np.atleast_2d(env.current_state).astype(np.float32)
+            #             traj_a = np.atleast_2d(a).astype(np.float32)
+            #             traj_a_lp = np.atleast_2d(a_log_prob).astype(np.float32)
+            #             traj_r = np.atleast_2d(reward_norm(env.reward)).astype(np.float32)
+            #             traj_s_ = np.atleast_2d(env.next_state).astype(np.float32)
+            #             traj_done = np.atleast_2d(1.0 if env.is_terminal else 0.0).astype(np.float32)
+            #             traj_success = np.atleast_2d(success).astype(np.float32)
+            #         else:
+            #             traj_s = np.vstack((traj_s, env.current_state))
+            #             traj_a = np.vstack((traj_a, a))
+            #             traj_a_lp = np.vstack((traj_a_lp, a_log_prob))
+            #             traj_r = np.vstack((traj_r, reward_norm(env.reward)))
+            #             traj_s_ = np.vstack((traj_s_, env.next_state))
+            #             traj_done = np.vstack((traj_done, 1.0 if env.is_terminal else 0.0))
+            #             traj_success = np.vstack((traj_success, success))
+            # '''2. 重新开始一次收集数据'''
 
             '''3. 开始一次新的学习'''
             print('~~~~~~~~~~ Training Start~~~~~~~~~~')
             print('Train Epoch: {}'.format(t_epoch))
+            # timestep += NUM_OF_TRAJ * env.time_max / env.dt
             timestep += buffer_size
-            agent.learn(timestep)
+            agent.learn(timestep, buf_num=1)    # 使用 RolloutBuffer2
             agent.cnt += 1
 
-            '''每学习 10 次，测试一下'''
+            '''4. 每学习 10 次，测试一下'''
             if t_epoch % 10 == 0 and t_epoch > 0:
                 n = 5
                 print('   Training pause......')
@@ -247,15 +316,15 @@ if __name__ == '__main__':
                 pd.DataFrame({'reward': test_reward}).to_csv(simulationPath + 'test_record.csv')
                 print('   Testing finished...')
                 print('   Go back to training...')
-            '''每学习 10 次，测试一下'''
+            '''4. 每学习 10 次，测试一下'''
 
-            '''每学习 100 次，减小一次探索概率'''
+            '''5. 每学习 100 次，减小一次探索概率'''
             if t_epoch % 100 == 0 and t_epoch > 0:
                 if agent.actor.std > 0.1:
                     agent.actor.std -= 0.05
-            '''每学习 100 次，减小一次探索概率'''
+            '''5. 每学习 100 次，减小一次探索概率'''
 
-            '''每学习 50 次，保存一下 policy'''
+            '''6. 每学习 50 次，保存一下 policy'''
             if t_epoch % 50 == 0 and t_epoch > 0:
                 # 	average_test_r = agent.agent_evaluate(5)
                 test_num += 1
@@ -265,10 +334,9 @@ if __name__ == '__main__':
                 time.sleep(0.01)
                 agent.save_ac(msg='trainNum_{}'.format(t_epoch), path=temp)
                 env.save_state_norm(temp)
-            '''每学习 50 次，保存一下 policy'''
+            '''6. 每学习 50 次，保存一下 policy'''
 
             t_epoch += 1
-            print('Sumr: %.2f' % sumr)
             print('~~~~~~~~~~  Training End ~~~~~~~~~~')
     else:
         opt_actor = PPOActor_Gaussian(state_dim=env_test.state_dim,
@@ -277,8 +345,8 @@ if __name__ == '__main__':
                                       a_max=np.array(env_test.action_range)[:, 1],
                                       init_std=0.5,
                                       use_orthogonal_init=True)
-        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train_opt/trainNum_300_episode_2/'
-        opt_actor.load_state_dict(torch.load(optPath + 'actor_trainNum_300_episode_2'))  # 测试时，填入测试actor网络
+        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train_opt2/trainNum_1000/'
+        opt_actor.load_state_dict(torch.load(optPath + 'actor_trainNum_1000'))  # 测试时，填入测试actor网络
         agent = PPO(env=env_test, actor=opt_actor, path=optPath)
         env_test.load_norm_normalizer_from_file(optPath, 'state_norm.csv')
         # exit(0)
@@ -286,7 +354,7 @@ if __name__ == '__main__':
         for i in range(n):
             opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
             reset_pos_ctrl_param('optimal')
-            env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
+            env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                     random_pos0=True,
                                                     new_att_ctrl_param=None,
                                                     new_pos_ctrl_parma=pos_ctrl_param)

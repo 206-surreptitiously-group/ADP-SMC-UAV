@@ -43,7 +43,7 @@ class PPOActor_Gaussian(nn.Module):
         self.std = torch.tensor(init_std, dtype=torch.float)
 
         if use_orthogonal_init:
-            print("------use_orthogonal_init------")
+            # print("------use_orthogonal_init------")
             orthogonal_init(self.fc1)
             orthogonal_init(self.fc2)
             orthogonal_init(self.fc3)
@@ -77,7 +77,7 @@ class PPOCritic(nn.Module):
         self.activate_func = nn.Tanh()
 
         if use_orthogonal_init:
-            print("------use_orthogonal_init------")
+            # print("------use_orthogonal_init------")
             orthogonal_init(self.fc1)
             orthogonal_init(self.fc2)
             orthogonal_init(self.fc3)
@@ -87,6 +87,16 @@ class PPOCritic(nn.Module):
         s = self.activate_func(self.fc2(s))
         v_s = self.fc3(s)
         return v_s
+
+    def init(self, use_orthogonal_init):
+        if use_orthogonal_init:
+            orthogonal_init(self.fc1)
+            orthogonal_init(self.fc2)
+            orthogonal_init(self.fc3)
+        else:
+            self.fc1.reset_parameters()
+            self.fc2.reset_parameters()
+            self.fc3.reset_parameters()
 
 
 class Proximal_Policy_Optimization:
@@ -124,7 +134,7 @@ class Proximal_Policy_Optimization:
         self.action_std = action_std_init
         self.path = path
         self.buffer = RolloutBuffer(buffer_size, self.env.state_dim, self.env.action_dim)
-        # self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
+        self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
         '''PPO'''
@@ -172,13 +182,16 @@ class Proximal_Policy_Optimization:
             a_logprob = dist.log_prob(a)  # The log probability density of the action
         return a.detach().cpu().numpy().flatten(), a_logprob.detach().cpu().numpy().flatten()
 
-    def learn(self, current_steps):
+    def learn(self, current_steps, buf_num:int=1):
         """
         @note: 	 network update
         @return: None
         """
         '''前期数据处理'''
-        s, a, a_lp, r, s_, done, success = self.buffer.to_tensor()
+        if buf_num == 1:
+            s, a, a_lp, r, s_, done, success = self.buffer.to_tensor()
+        else:
+            s, a, a_lp, r, s_, done, success = self.buffer2.to_tensor()
         adv = []
         gae = 0.
         with torch.no_grad():

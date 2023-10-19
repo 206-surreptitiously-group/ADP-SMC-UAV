@@ -134,51 +134,67 @@ class RolloutBuffer:
 
 class RolloutBuffer2:
     def __init__(self, state_dim: int, action_dim: int):
-        self.buffer_size = 0
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.actions = np.atleast_2d([]).astype(np.float32)
-        self.states = np.atleast_2d([]).astype(np.float32)
-        self.log_probs = np.atleast_1d([]).astype(np.float32)
-        self.rewards = np.atleast_1d([]).astype(np.float32)
-        self.state_values = np.atleast_1d([]).astype(np.float32)
-        self.is_terminals = np.atleast_1d([]).astype(np.float32)
+        self.s = np.atleast_2d([]).astype(np.float32)
+        self.a = np.atleast_2d([]).astype(np.float32)
+        self.a_lp = np.atleast_2d([]).astype(np.float32)
+        self.r = np.atleast_2d([]).astype(np.float32)
+        self.s_ = np.atleast_2d([]).astype(np.float32)
+        self.done = np.atleast_2d([]).astype(np.float32)
+        self.success = np.atleast_2d([]).astype(np.float32)
+        self.index = 0
 
-    def append_traj(self, s: np.ndarray, a: np.ndarray, log_prob: np.ndarray, r: np.ndarray, sv: np.ndarray, done: np.ndarray):
-        if self.buffer_size == 0:
-            self.states = np.atleast_2d(s).astype(np.float32)
-            self.actions = np.atleast_2d(a).astype(np.float32)
-            self.log_probs = np.atleast_1d(log_prob).astype(np.float32)
-            self.rewards = np.atleast_1d(r).astype(np.float32)
-            self.state_values = np.atleast_1d(sv).astype(np.float32)
-            self.is_terminals = np.atleast_1d(done).astype(np.float32)
+    def append_traj(self, s: np.ndarray, a: np.ndarray, log_prob: np.ndarray, r: float, s_: np.ndarray, done: float, success: float):
+        if self.index == 0:
+            self.s = np.atleast_2d(s).astype(np.float32)
+            self.a = np.atleast_2d(a).astype(np.float32)
+            self.a_lp = np.atleast_2d(log_prob).astype(np.float32)
+            self.r = np.atleast_2d(r).astype(np.float32)
+            self.s_ = np.atleast_2d(s_).astype(np.float32)
+            self.done = np.atleast_2d(done).astype(np.float32)
+            self.success = np.atleast_2d(success).astype(np.float32)
         else:
-            self.states = np.vstack((self.states, s))
-            self.actions = np.vstack((self.actions, a))
-            self.log_probs = np.hstack((self.log_probs, log_prob))
-            self.rewards = np.hstack((self.rewards, r))
-            self.state_values = np.hstack((self.state_values, sv))
-            self.is_terminals = np.hstack((self.is_terminals, done))
-        self.buffer_size += len(done)
+            self.s = np.vstack((self.s, s))
+            self.a = np.vstack((self.a, a))
+            self.a_lp = np.vstack((self.a_lp, log_prob))
+            self.r = np.vstack((self.r, r))
+            self.s_ = np.vstack((self.s_, s_))
+            self.done = np.vstack((self.done, done))
+            self.success = np.vstack((self.success, success))
+        self.index += len(done)
+
+    def to_tensor(self):
+        s = torch.tensor(self.s, dtype=torch.float)
+        a = torch.tensor(self.a, dtype=torch.float)
+        a_lp = torch.tensor(self.a_lp, dtype=torch.float)
+        r = torch.tensor(self.r, dtype=torch.float)
+        s_ = torch.tensor(self.s_, dtype=torch.float)
+        done = torch.tensor(self.done, dtype=torch.float)
+        success = torch.tensor(self.success, dtype=torch.float)
+
+        return s, a, a_lp, r, s_, done, success
 
     def print_size(self):
         print('==== RolloutBuffer ====')
-        print('actions: {}'.format(self.actions.size))
-        print('states: {}'.format(self.states.size))
-        print('logprobs: {}'.format(self.log_probs.size))
-        print('rewards: {}'.format(self.rewards.size))
-        print('state_values: {}'.format(self.state_values.size))
-        print('is_terminals: {}'.format(self.is_terminals.size))
+        print('s: {}'.format(self.s.size))
+        print('a: {}'.format(self.a.size))
+        print('a_lp: {}'.format(self.a_lp.size))
+        print('r: {}'.format(self.r.size))
+        print('s_: {}'.format(self.s_.size))
+        print('done: {}'.format(self.done.size))
+        print('success: {}'.format(self.success.size))
         print('==== RolloutBuffer ====')
 
     def clean(self):
-        self.buffer_size = 0
-        self.actions = np.atleast_2d([]).astype(np.float32)
-        self.states = np.atleast_2d([]).astype(np.float32)
-        self.log_probs = np.atleast_1d([]).astype(np.float32)
-        self.rewards = np.atleast_1d([]).astype(np.float32)
-        self.state_values = np.atleast_1d([]).astype(np.float32)
-        self.is_terminals = np.atleast_1d([]).astype(np.float32)
+        self.index = 0
+        self.s = np.atleast_2d([]).astype(np.float32)
+        self.a = np.atleast_2d([]).astype(np.float32)
+        self.a_lp = np.atleast_2d([]).astype(np.float32)
+        self.r = np.atleast_2d([]).astype(np.float32)
+        self.s_ = np.atleast_2d([]).astype(np.float32)
+        self.done = np.atleast_2d([]).astype(np.float32)
+        self.success = np.atleast_2d([]).astype(np.float32)
 
 
 class OUActionNoise(object):
