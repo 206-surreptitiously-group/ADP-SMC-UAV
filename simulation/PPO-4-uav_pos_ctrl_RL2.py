@@ -149,10 +149,6 @@ if __name__ == '__main__':
             '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
             '''如果两次奖励函数不一样，那么必须重新初始化 critic'''
 
-        # _state = np.atleast_2d(np.zeros(env.state_dim))
-        # _action = np.atleast_2d(np.zeros(env.action_dim))
-        # _state_norm = np.atleast_2d(np.zeros(env.state_dim))
-
         agent = PPO(env=env,
                     actor_lr=1e-4,
                     critic_lr=1e-3,
@@ -172,7 +168,6 @@ if __name__ == '__main__':
                     path=simulationPath)
         agent.PPO_info()
 
-        # while t_epoch < max_t_epoch:
         while True:
             '''1. 初始化 buffer 索引和累计奖励记录'''
             sumr = 0.
@@ -256,8 +251,8 @@ if __name__ == '__main__':
 
             '''每学习 100 次，减小一次探索概率'''
             if t_epoch % 100 == 0 and t_epoch > 0:
-                agent.actor.std -= 0.05
-                agent.actor.std = max(agent.actor.std, 0.1)
+                if agent.actor.std > 0.1:
+                    agent.actor.std -= 0.05
             '''每学习 100 次，减小一次探索概率'''
 
             '''每学习 50 次，保存一下 policy'''
@@ -265,10 +260,10 @@ if __name__ == '__main__':
                 # 	average_test_r = agent.agent_evaluate(5)
                 test_num += 1
                 print('...check point save...')
-                temp = simulationPath + 'trainNum_{}_episode_{}/'.format(t_epoch, episode)
+                temp = simulationPath + 'trainNum_{}/'.format(t_epoch)
                 os.mkdir(temp)
                 time.sleep(0.01)
-                agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, episode), path=temp)
+                agent.save_ac(msg='trainNum_{}'.format(t_epoch), path=temp)
                 env.save_state_norm(temp)
             '''每学习 50 次，保存一下 policy'''
 
