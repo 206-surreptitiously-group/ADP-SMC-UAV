@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 
 from common.common_cls import *
@@ -34,12 +35,12 @@ class PPOActor_Gaussian(nn.Module):
         # self.log_std = nn.Parameter(torch.zeros(1, action_dim))  # We use 'nn.Parameter' to train log_std automatically
         # self.log_std = nn.Parameter(np.log(init_std) * torch.ones(action_dim))  # We use 'nn.Parameter' to train log_std automatically
         self.activate_func = nn.Tanh()
-        self.a_min = torch.tensor(a_min)
-        self.a_max = torch.tensor(a_max)
+        self.a_min = torch.tensor(a_min, dtype=torch.float)
+        self.a_max = torch.tensor(a_max, dtype=torch.float)
         self.off = (self.a_min + self.a_max) / 2.0
         self.gain = self.a_max - self.off
         self.action_dim = action_dim
-        self.std = init_std
+        self.std = torch.tensor(init_std, dtype=torch.float)
 
         if use_orthogonal_init:
             print("------use_orthogonal_init------")
@@ -57,14 +58,13 @@ class PPOActor_Gaussian(nn.Module):
 
     def get_dist(self, s):
         mean = self.forward(s)
-        mean = torch.tensor(mean, dtype=torch.float)
-        # var = torch.full((self.action_dim,), self.std * self.std, dtype=torch.float)
-        # cov_mat = torch.diag(var).unsqueeze(dim=0)
-        # # log_std = self.log_std.expand_as(mean)
-        # # std = torch.exp(log_std)
-        # # dist = Normal(mean, std)
-        # dist = MultivariateNormal(mean, cov_mat)
-        dist = Normal(mean, self.std)
+        # mean = torch.tensor(mean, dtype=torch.float)
+        # log_std = self.log_std.expand_as(mean)
+        # std = torch.exp(log_std)
+        std = self.std.expand_as(mean)
+        dist = Normal(mean, std)  # Get the Gaussian distribution
+        # std = self.std.expand_as(mean)
+        # dist = Normal(mean, std)
         return dist
 
 

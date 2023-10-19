@@ -19,8 +19,6 @@ from algorithm.policy_base.Proximal_Policy_Optimization import PPOActor_Gaussian
 from common.common_cls import *
 from common.common_func import *
 
-optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train2/'
-show_per = 1
 timestep = 0
 ENV = 'uav_pos_ctrl_RL'
 ALGORITHM = 'PPO'
@@ -118,7 +116,7 @@ if __name__ == '__main__':
     simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
     os.mkdir(simulationPath)
     c = cv.waitKey(1)
-    TRAIN = True  # 直接训练
+    TRAIN = False  # 直接训练
     RETRAIN = False  # 基于之前的训练结果重新训练
     TEST = not TRAIN
 
@@ -216,11 +214,6 @@ if __name__ == '__main__':
                                         index=buffer_index  # index
                                         )
                     buffer_index += 1
-                    # _state = np.insert(_state, _state.shape[0], env.current_state, axis=0)
-                    # _state_norm = np.insert(_state_norm,
-                    #                         _state_norm.shape[0],
-                    #                         env.current_state_norm(env.current_state, update=False), axis=0)
-                    # _action = np.insert(_action, _action.shape[0], new_SMC_param, axis=0)
 
             '''3. 开始一次新的学习'''
             print('~~~~~~~~~~ Training Start~~~~~~~~~~')
@@ -277,16 +270,6 @@ if __name__ == '__main__':
                 time.sleep(0.01)
                 agent.save_ac(msg='trainNum_{}_episode_{}'.format(t_epoch, episode), path=temp)
                 env.save_state_norm(temp)
-                # if t_epoch % 100 == 0:
-                #     (pd.DataFrame(_state,
-                #                   columns=['ex', 'ey', 'ez', 'evx', 'evy', 'evz']).
-                #      to_csv(simulationPath + '_state.csv', sep=',', index=False))
-                #     (pd.DataFrame(_state_norm,
-                #                   columns=['ex', 'ey', 'ez', 'evx', 'evy', 'evz']).
-                #      to_csv(simulationPath + '_state_norm.csv', sep=',', index=False))
-                #     (pd.DataFrame(_action,
-                #                   columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
-                #      to_csv(simulationPath + '_action.csv', sep=',', index=False))
             '''每学习 50 次，保存一下 policy'''
 
             t_epoch += 1
@@ -297,12 +280,16 @@ if __name__ == '__main__':
                                       action_dim=env_test.action_dim,
                                       a_min=np.array(env_test.action_range)[:, 0],
                                       a_max=np.array(env_test.action_range)[:, 1],
+                                      init_std=0.5,
                                       use_orthogonal_init=True)
-        opt_actor.load_state_dict(torch.load(optPath + 'optimal_actor'))  # 测试时，填入测试actor网络
-        agent = PPO(env=env_test, actor=opt_actor, path=simulationPath)
-        n = 1
-        opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
+        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/train_opt/trainNum_300_episode_2/'
+        opt_actor.load_state_dict(torch.load(optPath + 'actor_trainNum_300_episode_2'))  # 测试时，填入测试actor网络
+        agent = PPO(env=env_test, actor=opt_actor, path=optPath)
+        env_test.load_norm_normalizer_from_file(optPath, 'state_norm.csv')
+        # exit(0)
+        n = 10
         for i in range(n):
+            opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
             reset_pos_ctrl_param('optimal')
             env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
                                                     random_pos0=True,
@@ -311,7 +298,7 @@ if __name__ == '__main__':
             env_test.show_image(False)
             test_r = 0.
             while not env_test.is_terminal:
-                _a = agent.evaluate(env_test.current_state)
+                _a = agent.evaluate(env_test.current_state_norm(env_test.current_state, update=False))
                 # _new_SMC_param = agent.action_linear_trans(_a)
                 _new_SMC_param = _a.copy()
                 opt_SMC_para = np.insert(opt_SMC_para, opt_SMC_para.shape[0], _new_SMC_param, axis=0)

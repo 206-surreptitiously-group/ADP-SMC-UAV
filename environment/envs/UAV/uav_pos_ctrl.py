@@ -21,7 +21,7 @@ class uav_pos_ctrl(UAV):
 		self.att_ref_old = np.zeros(3)
 		self.dot_att_ref = np.zeros(3)
 
-		self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)  # 最大角速度不能超多 60 度 / 秒
+		self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)  # 最大角速度不能超过 60 度 / 秒
 
 		self.obs = np.zeros(3)  # output of the observer
 		self.dis = np.zeros(3)  # external disturbance, known by me, but not the controller
@@ -49,7 +49,7 @@ class uav_pos_ctrl(UAV):
 		e = self.eta() - ref
 		de = self.dot_eta() - dot_ref
 		self.pos_ctrl.control_update(self.kt, self.m, self.uav_vel(), e, de, dot2_ref, obs)
-		phi_d, theta_d, uf = self.uo_2_ref_angle_throttle(limit=[np.pi / 3, np.pi / 3], att_limitation=True)
+		phi_d, theta_d, uf = self.uo_2_ref_angle_throttle(limit=[np.pi / 4, np.pi / 4], att_limitation=True)
 		return phi_d, theta_d, uf
 
 	def att_control(self, ref: np.ndarray, dot_ref: np.ndarray, dot2_ref: np.ndarray, att_only: bool = False):
@@ -75,6 +75,11 @@ class uav_pos_ctrl(UAV):
 		return self.att_ctrl.control
 
 	def uo_2_ref_angle_throttle(self, limit=None, att_limitation: bool = False):
+		"""
+		@param limit:				期望姿态角限制
+		@param att_limitation:		是否使用 limit
+		@return:					期望 phi_d theta_d 油门
+		"""
 		ux = self.pos_ctrl.control[0]
 		uy = self.pos_ctrl.control[1]
 		uz = self.pos_ctrl.control[2]
@@ -219,7 +224,7 @@ class uav_pos_ctrl(UAV):
 
 		'''期望角速度限制'''
 		dot_rho_d = np.clip(dot_rho_d, -self.dot_att_ref_limit, self.dot_att_ref_limit)
-		rho_d = rho_d + dot_rho_d * self.dt
+		rho_d += dot_rho_d * self.dt
 		'''期望角速度限制'''
 
 		torque = self.att_control(rho_d, dot_rho_d, np.zeros(3), att_only=False)

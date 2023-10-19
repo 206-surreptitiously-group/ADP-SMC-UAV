@@ -50,8 +50,8 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
 
         self.reward = 0.
         self.Q_pos = np.array([1., 1., 1.])  # 位置误差惩罚
-        self.Q_vel = np.array([0.01, 0.01, 0.01])  # 速度误差惩罚
-        self.R = np.array([0.00, 0.00, 0.00])  # 期望加速度输出 (即控制输出) 惩罚
+        self.Q_vel = np.array([0.1, 0.1, 0.1])  # 速度误差惩罚
+        self.R = np.array([0.05, 0.05, 0.05])  # 期望加速度输出 (即控制输出) 惩罚
         self.is_terminal = False
         self.terminal_flag = 0
         '''rl_base'''
@@ -188,3 +188,14 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
             'next_S': self.next_state_norm.running_ms.S,
         }
         pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
+
+    def load_norm_normalizer_from_file(self, path, file):
+        data = pd.read_csv(path + file, header=0).to_numpy()
+        self.current_state_norm.running_ms.n = data[0, 0]
+        self.current_state_norm.running_ms.mean = data[:, 1]
+        self.current_state_norm.running_ms.std = data[:, 2]
+        self.current_state_norm.running_ms.S = data[:, 3]
+        self.next_state_norm.running_ms.n = data[0, 4]
+        self.next_state_norm.running_ms.mean = data[:, 5]
+        self.next_state_norm.running_ms.std = data[:, 6]
+        self.next_state_norm.running_ms.S = data[:, 7]
