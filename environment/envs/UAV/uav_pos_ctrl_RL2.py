@@ -50,7 +50,7 @@ class uav_pos_ctrl_RL2(rl_base, uav_pos_ctrl):
 
         self.reward = 0.
         self.Q_pos = np.array([1., 1., 1.])  # 位置误差惩罚
-        self.Q_vel = np.array([0.1, 0.1, 0.1])  # 速度误差惩罚
+        self.Q_vel = np.array([0.01, 0.01, 0.01])  # 速度误差惩罚
         self.R = np.array([0.01, 0.01, 0.01])  # 期望加速度输出 (即控制输出) 惩罚
         self.is_terminal = False
         self.terminal_flag = 0

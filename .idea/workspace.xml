@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL2.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL2.py" afterDir="false" />
     </list>
