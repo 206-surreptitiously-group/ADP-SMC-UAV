@@ -1,0 +1,17 @@
+训练分为三次。
+第一次：
+	std: 0.4		actor_lr: 1e-4		critic_lr: 1e-3
+第二次：
+	std: 0.2		actor_lr: 5e-5		critic_lr: 5e-4
+第三次：
+	std: 0.2		actor_lr: 2.5e-5	critic_lr: 2.5e-4	
+	
+其中，第三次结果最好，但是第三次的滑膜参数趋近于不变，不太好看 (虽然实际上有可能就是最优的)。
+画图的话，可以用第一次和第三次的作为数据。
+测试网络，可以使用第二次的。
+
+现在批量测试所有网络的效果，会在对应文件夹中生成两个文件 test_sumr.csv 和 record.txt
+
+控制测试可以使用 maybe_optimal2 的 1000，和 maybe_optimal3 的 100
+对比仿真可以用 maybe_optimal2 的 550 (目前 MSTR 最小的一个)
+

@@ -71,11 +71,16 @@ class UAV:
         self.torque = np.array([0., 0., 0.]).astype(float)  # 转矩
         self.terminal_flag = 0
 
+        '''set safe zone'''
         self.pos_zone = param.pos_zone
         self.att_zone = param.att_zone
+        self.phi_min, self.phi_max = self.att_zone[0]
+        self.theta_min, self.theta_max = self.att_zone[1]
+        self.psi_min, self.psi_max = self.att_zone[2]
         self.x_min, self.x_max = self.pos_zone[0]
         self.y_min, self.y_max = self.pos_zone[1]
         self.z_min, self.z_max = self.pos_zone[2]
+        '''set safe zone'''
 
         '''
             学习过程中，最大容许控制误差。学习过程中，出界是在所难免的。因此，pos_zone 用来画图和生成参考轨迹区域。
@@ -84,7 +89,7 @@ class UAV:
         '''
         self.max_admissible_error = 3.0
 
-        '''opencv visualization'''
+        '''opencv visualization for position control'''
         self.width = 1200
         self.height = 400
         self.x_offset = 40
@@ -102,7 +107,16 @@ class UAV:
         self.pmy_p2 = (self.height - 2 * self.y_offset) / dz
         self.pmx_p3 = self.wp / dz
         self.pmy_p3 = (self.height - 2 * self.y_offset) / dx
-        '''opencv visualization'''
+        '''opencv visualization for position control'''
+
+        '''opencv visualization for attitude control'''
+        self.att_w = 900
+        self.att_h = 300
+        self.att_offset = 10    # 图与图之间的间隔
+        self.att_image = np.ones([self.att_h, self.att_w, 3], np.uint8) * 255
+        self.att_image_copy = self.image.copy()
+        self.att_image_r = int(0.36 * self.att_w / 3)
+        '''opencv visualization for attitude control'''
 
     def dis2pixel(self, coord, flag: str, offset):
         if flag == 'xoy':
@@ -346,6 +360,38 @@ class UAV:
             cv.waitKey(0)
         else:
             cv.imshow('Projection', self.image)
+            cv.waitKey(1)
+
+    def draw_att_init_image(self):
+        x1 = int(self.att_w / 3)
+        x2 = int(2 * self.att_w / 3)
+        y = int(self.att_h / 2) + 15
+        cv.line(self.att_image, (x1, 0), (x1, self.att_h), Color().Black, 1)
+        cv.line(self.att_image, (x2, 0), (x2, self.att_h), Color().Black, 1)
+
+        cv.circle(self.att_image, (x1 + int(x1 / 2), y), self.att_image_r, Color().Orange, 2)
+        cv.circle(self.att_image, (2 * x1 + int(x1 / 2), y), self.att_image_r, Color().Orange, 2)
+        cv.circle(self.att_image, (int(x1 / 2), y), self.att_image_r, Color().Orange, 2)
+
+        cv.circle(self.att_image, (x1 + int(x1 / 2), y), 5, Color().Black, -1)
+        cv.circle(self.att_image, (2 * x1 + int(x1 / 2), y), 5, Color().Black, -1)
+        cv.circle(self.att_image, (int(x1 / 2), y), 5, Color().Black, -1)
+
+        cv.putText(self.att_image, 'roll', (int(x1 / 2 - 20), 25), cv.FONT_HERSHEY_COMPLEX, 0.8, Color().Blue, 1)
+        cv.putText(self.att_image, 'pitch', (int(x1 + x1 / 2 - 28), 25), cv.FONT_HERSHEY_COMPLEX, 0.8, Color().Blue, 1)
+        cv.putText(self.att_image, 'yaw', (int(2 * x1 + x1 / 2 - 20), 25), cv.FONT_HERSHEY_COMPLEX, 0.8, Color().Blue, 1)
+
+        self.att_image_copy = self.att_image.copy()
+
+    def draw_att(self):
+
+
+    def show_att_image(self, iswait: bool = False):
+        if iswait:
+            cv.imshow('Attitude', self.att_image)
+            cv.waitKey(0)
+        else:
+            cv.imshow('Attitude', self.att_image)
             cv.waitKey(1)
 
     def ode(self, xx: np.ndarray, dis: np.ndarray):

@@ -105,12 +105,9 @@ class PPOActor_Gaussian(nn.Module):
 
 if __name__ == '__main__':
     # path1 = './datasave/nets/train_opt2/test_record.csv'
-    # data = pd.read_csv('./test_record.csv', header=0).to_numpy()
-    # r = data[:, 1]
-    # print(r.shape)
-    # print(np.max(r))
-    # print(np.argmax(r))
-    # r = np.clip(data[:, 1], -500, 0)
+    # data = pd.read_csv('./sumr_list.csv', header=0).to_numpy()
+    #
+    # # data[:, 1] = np.clip(data[:, 1], -50000, 0)
     # r1 = 0.0
     # r2 = 1.0
     # # print(data.shape)
@@ -122,6 +119,8 @@ if __name__ == '__main__':
     # plt.plot(data[i1: i2, 0], data[i1: i2, 1])
     # plt.show()
 
-    actor = PPOActor_Gaussian()
-    s = torch.rand((100, 6))
-    actor.forward(s)
+    # actor = PPOActor_Gaussian()
+    # s = torch.rand((100, 6))
+    # actor.forward(s)
+    print(np.arange(10))
+    pass

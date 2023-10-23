@@ -9,7 +9,7 @@ from UAV.uav_att_ctrl import uav_att_ctrl
 from common.common_func import *
 
 '''Parameter list of the quadrotor'''
-DT = 0.01
+DT = 0.02
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8
@@ -25,7 +25,7 @@ uav_param.vel0 = np.array([0, 0, 0])
 uav_param.angle0 = np.array([0, 0, 0])
 uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
-uav_param.time_max = 30
+uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-5, 5], [-5, 5], [0, 3]])
 uav_param.att_zone = np.atleast_2d([[deg2rad(-45), deg2rad(45)], [deg2rad(-45), deg2rad(45)], [deg2rad(-120), deg2rad(120)]])
 '''Parameter list of the quadrotor'''
@@ -48,34 +48,38 @@ if __name__ == '__main__':
 	'''1. Define a controller'''
 	att_ctrl = uav_att_ctrl(uav_param, att_ctrl_param)
 
-	'''2. Define parameters for signal generator'''
-	ref_amplitude = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
-	ref_period = np.array([4, 4, 4])
-	ref_bias_a = np.array([0, 0, 0])
-	ref_bias_phase = np.array([0., np.pi / 2, np.pi / 2])
+	NUM_OF_SIMULATION = 1
+	cnt = 0
 
-	'''3. Control'''
-	while att_ctrl.time < att_ctrl.time_max - DT / 2:
-		# if att_ctrl.is_att_out():
-		#     print('Attitude out!!!!!')
-		if att_ctrl.n % 1000 == 0:
-			print('time: ', att_ctrl.n * att_ctrl.dt)
-		'''3.1. generate reference signal'''
-		rhod, dot_rhod, dot2_rhod, dot3_rhod = ref_inner(att_ctrl.time, ref_amplitude, ref_period, ref_bias_a, ref_bias_phase)
+	while cnt < NUM_OF_SIMULATION:
+		att_ctrl.reset_uav_att_ctrl(random_att_trajectory=True, yaw_fixed=False, new_att_ctrl_param=None)
+		att_ctrl.show_att_image(iswait=True)
+		if cnt % 1 == 0:
+			print('Current:', cnt)
 
-		'''3.2. control'''
-		torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=dot2_rhod)
-		att_ctrl.update(action=torque)
+		'''3. Control'''
+		while att_ctrl.time < att_ctrl.time_max - DT / 2:
+			'''3.1. generate reference signal'''
+			rhod, dot_rhod, dot2_rhod, _ = ref_inner(att_ctrl.time,
+													 att_ctrl.ref_att_amplitude,
+													 att_ctrl.ref_att_period,
+													 att_ctrl.ref_att_bias_a,
+													 att_ctrl.ref_att_bias_phase)
 
-	print('Finish...')
-	SAVE = False
-	if SAVE:
-		new_path = (os.path.dirname(os.path.abspath(__file__)) +
-					'/../../datasave/' +
-					datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '/')
-		os.mkdir(new_path)
-		att_ctrl.collector.package2file(path=new_path)
-	att_ctrl.collector.plot_att()
-	att_ctrl.collector.plot_pqr()
-	att_ctrl.collector.plot_torque()
-	plt.show()
+			'''3.2. control'''
+			# torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=dot2_rhod)
+			torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=None)
+			att_ctrl.update(action=torque)
+		cnt += 1
+		# print('Finish...')
+		# SAVE = False
+		# if SAVE:
+		# 	new_path = (os.path.dirname(os.path.abspath(__file__)) +
+		# 				'/../../datasave/' +
+		# 				datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '/')
+		# 	os.mkdir(new_path)
+		# 	att_ctrl.collector.package2file(path=new_path)
+		att_ctrl.collector.plot_att()
+		att_ctrl.collector.plot_pqr()
+		att_ctrl.collector.plot_torque()
+		plt.show()

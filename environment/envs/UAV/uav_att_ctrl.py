@@ -12,7 +12,15 @@ class uav_att_ctrl(UAV):
         self.ref = np.zeros(3)
         self.dot_ref = np.zeros(3)
 
-    def att_control(self, ref: np.ndarray, dot_ref: np.ndarray, dot2_ref: np.ndarray):
+        '''参考轨迹记录'''
+        self.ref_att_amplitude = None
+        self.ref_att_period = None
+        self.ref_att_bias_a = None
+        self.ref_att_bias_phase = None
+        self.att_trajectory = None
+        '''参考轨迹记录'''
+
+    def att_control(self, ref: np.ndarray, dot_ref: np.ndarray, dot2_ref):
         """
         @param ref:         参考信号
         @param dot_ref:     参考信号一阶导数
@@ -25,7 +33,10 @@ class uav_att_ctrl(UAV):
         de = self.dot_rho1() - self.dot_ref
         sec_order_att_dy = self.second_order_att_dynamics()
         ctrl_mat = self.att_control_matrix()
-        self.att_ctrl.control_update(sec_order_att_dy, ctrl_mat, e, de, dot2_ref)
+        if dot2_ref is not None:
+            self.att_ctrl.control_update(sec_order_att_dy, ctrl_mat, e, de, dot2_ref)
+        else:
+            self.att_ctrl.control_update(sec_order_att_dy, ctrl_mat, e, de, np.zeros(3))
         return self.att_ctrl.control
 
     def update(self, action: np.ndarray):
@@ -45,6 +56,83 @@ class uav_att_ctrl(UAV):
         self.collector.record(data_block)
         self.rk44(action=action_4_uav, dis=np.zeros(3), n=1, att_only=True)
 
+    def generate_ref_att_trajectory(self, _amplitude: np.ndarray, _period: np.ndarray, _bias_a: np.ndarray, _bias_phase: np.ndarray):
+        """
+        @param _amplitude:
+        @param _period:
+        @param _bias_a:
+        @param _bias_phase:
+        @return:
+        """
+        t = np.linspace(0, self.time_max, int(self.time_max / self.dt) + 1)
+        r_phi = _bias_a[0] + _amplitude[0] * np.sin(2 * np.pi / _period[0] * t + _bias_phase[0])
+        r_theta = _bias_a[1] + _amplitude[1] * np.sin(2 * np.pi / _period[1] * t + _bias_phase[1])
+        r_psi = _bias_a[2] + _amplitude[2] * np.sin(2 * np.pi / _period[2] * t + _bias_phase[2])
+        return np.vstack((r_phi, r_theta, r_psi)).T
 
-# if __name__ == '__main__':
-#     print('fuck')
+    def generate_random_att_trajectory(self, is_random: bool = False, yaw_fixed: bool = False):
+        """
+        @param is_random:	随机在振幅与周期
+        @param yaw_fixed:	偏航角固定
+        @return:			None
+        """
+        center = np.zeros(3)    # 默认姿态范围对称
+        if is_random:
+            A = np.array([
+                np.random.uniform(low=0, high=self.phi_max - center[0]),
+                np.random.uniform(low=0, high=self.theta_max - center[1]),
+                np.random.uniform(low=0, high=self.psi_max - center[2])])
+            T = np.random.uniform(low=3, high=6, size=3)  # 随机生成周期
+            phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
+        else:
+            A = np.pi / 3 * np.ones(3)
+            T = np.array([6., 6., 10])
+            phi0 = np.array([np.pi / 2, 0., 0.])
+
+        if yaw_fixed:
+            A[2] = 0.
+            phi0[2] = 0.
+
+        self.ref_att_amplitude = A
+        self.ref_att_period = T
+        self.ref_att_bias_a = center
+        self.ref_att_bias_phase = phi0
+        self.att_trajectory = self.generate_ref_att_trajectory(self.ref_att_amplitude, self.ref_att_period, self.ref_att_bias_a, self.ref_att_bias_phase)
+
+    def controller_reset(self):
+        self.att_ctrl.fntsmc_att_reset()
+
+    def controller_reset_with_new_param(self, new_att_param: fntsmc_param = None):
+        if new_att_param is not None:
+            self.att_ctrl.fntsmc_att_reset_with_new_param(new_att_param)
+
+    def collector_reset(self, N: int):
+        self.collector.reset(N)
+
+    def reset_uav_att_ctrl(self,
+                           random_att_trajectory: bool = False,
+                           yaw_fixed: bool = False,
+                           new_att_ctrl_param: fntsmc_param = None):
+        """
+        @param random_att_trajectory:
+        @param yaw_fixed:
+        @param new_att_ctrl_param:
+        @return:
+        """
+        '''1. generate random trajectory'''
+        self.generate_random_att_trajectory(is_random=random_att_trajectory, yaw_fixed=yaw_fixed)
+
+        '''2. reset uav randomly or not'''
+        self.reset_uav()
+
+        '''3. reset collector'''
+        self.collector_reset(round(self.time_max / self.dt))
+
+        '''4. reset controller'''
+        if new_att_ctrl_param is not None:
+            self.att_ctrl.fntsmc_att_reset_with_new_param(new_att_ctrl_param)
+        else:
+            self.att_ctrl.fntsmc_att_reset()
+
+        '''5. reset image'''
+        self.draw_att_init_image()
