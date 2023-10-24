@@ -5,16 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-24-13-25-34-PPO-uav_att_ctrl_RL/sumr_list.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-24-13-25-34-PPO-uav_att_ctrl_RL/test_record.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-24-14-12-05-PPO-uav_att_ctrl_RL/sumr_list.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-24-14-12-05-PPO-uav_att_ctrl_RL/test_record.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl_RL.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/test_att_ctrl.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/test_att_ctrl.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
