@@ -129,7 +129,7 @@ if __name__ == '__main__':
                                             action_dim=env.action_dim,
                                             a_min=np.array(env.action_range)[:, 0],
                                             a_max=np.array(env.action_range)[:, 1],
-                                            init_std=0.4,  # 第2次学是 0.3
+                                            init_std=0.7,  # 第2次学是 0.3
                                             use_orthogonal_init=True),
                     critic=PPOCritic(state_dim=env.state_dim, use_orthogonal_init=True),
                     path=simulationPath)
@@ -151,43 +151,43 @@ if __name__ == '__main__':
             '''1. 初始化 buffer 索引和累计奖励记录'''
 
             '''2. 收集数据'''
-            # while buffer_index < agent.buffer.batch_size:
-            #     if env.is_terminal:  # 如果某一个回合结束
-            #         reset_att_ctrl_param('zero')
-            #         # if t_epoch % 10 == 0 and t_epoch > 0:
-            #         print('Sumr:  ', sumr)
-            #         sumr_list.append(sumr)
-            #         sumr = 0.
-            #         env.reset_uav_att_ctrl_RL_tracking(random_trajectroy=True,
-            #                                            yaw_fixed=False,
-            #                                            new_att_ctrl_param=att_ctrl_param)
-            #     else:
-            #         env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
-            #         a, a_log_prob = agent.choose_action(env.current_state)
-            #         # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
-            #         new_SMC_param = a.copy()
-            #         env.get_param_from_actor(new_SMC_param)
-            #
-            #         rhod, dot_rhod, dot2_rhod, _ = ref_inner(env.time,
-            #                                                  env.ref_att_amplitude,
-            #                                                  env.ref_att_period,
-            #                                                  env.ref_att_bias_a,
-            #                                                  env.ref_att_bias_phase)
-            #         torque = env.att_control(rhod, dot_rhod, None)
-            #         env.step_update([0., torque[0], torque[1], torque[2]])
-            #         sumr += env.reward
-            #         success = 1.0 if env.terminal_flag == 1 else 0.0
-            #         agent.buffer.append(s=env.current_state_norm(env.current_state, update=True),
-            #                             a=a,  # a
-            #                             log_prob=a_log_prob,  # a_lp
-            #                             # r=env.reward,							# r
-            #                             r=reward_norm(env.reward),  # 这里使用了奖励归一化
-            #                             s_=env.next_state_norm(env.next_state, update=True),
-            #                             done=1.0 if env.is_terminal else 0.0,  # done
-            #                             success=success,  # 固定时间内，不出界，就是 success
-            #                             index=buffer_index  # index
-            #                             )
-            #         buffer_index += 1
+            while buffer_index < agent.buffer.batch_size:
+                if env.is_terminal:  # 如果某一个回合结束
+                    reset_att_ctrl_param('zero')
+                    # if t_epoch % 10 == 0 and t_epoch > 0:
+                    print('Sumr:  ', sumr)
+                    sumr_list.append(sumr)
+                    sumr = 0.
+                    env.reset_uav_att_ctrl_RL_tracking(random_trajectroy=True,
+                                                       yaw_fixed=False,
+                                                       new_att_ctrl_param=att_ctrl_param)
+                else:
+                    env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
+                    a, a_log_prob = agent.choose_action(env.current_state)
+                    # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
+                    new_SMC_param = a.copy()
+                    env.get_param_from_actor(new_SMC_param)
+
+                    rhod, dot_rhod, dot2_rhod, _ = ref_inner(env.time,
+                                                             env.ref_att_amplitude,
+                                                             env.ref_att_period,
+                                                             env.ref_att_bias_a,
+                                                             env.ref_att_bias_phase)
+                    torque = env.att_control(rhod, dot_rhod, None)
+                    env.step_update([torque[0], torque[1], torque[2]])
+                    sumr += env.reward
+                    success = 1.0 if env.terminal_flag == 1 else 0.0
+                    agent.buffer.append(s=env.current_state_norm(env.current_state, update=True),
+                                        a=a,  # a
+                                        log_prob=a_log_prob,  # a_lp
+                                        # r=env.reward,							# r
+                                        r=reward_norm(env.reward),  # 这里使用了奖励归一化
+                                        s_=env.next_state_norm(env.next_state, update=True),
+                                        done=1.0 if env.is_terminal else 0.0,  # done
+                                        success=success,  # 固定时间内，不出界，就是 success
+                                        index=buffer_index  # index
+                                        )
+                    buffer_index += 1
             '''2. 收集数据'''
 
             '''3. 开始学习'''
@@ -198,7 +198,7 @@ if __name__ == '__main__':
             agent.cnt += 1
 
             '''4. 每学习 10 次，测试一下'''
-            if t_epoch % 1 == 0 and t_epoch > 0:
+            if t_epoch % 10 == 0 and t_epoch > 0:
                 n = 5
                 print('   Training pause......')
                 print('   Testing...')
@@ -210,9 +210,8 @@ if __name__ == '__main__':
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env.current_state_norm(env_test.current_state, update=False))
-                        # _new_SMC_param = agent.action_linear_trans(_a)
                         _new_SMC_param = _a.copy()
-                        # env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                        env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                         _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
                                                            env_test.ref_att_amplitude,
                                                            env_test.ref_att_period,
