@@ -44,7 +44,7 @@ uav_param.pqr0 = np.array([0, 0, 0])
 uav_param.dt = DT
 uav_param.time_max = 10
 uav_param.pos_zone = np.atleast_2d([[-np.inf, np.inf], [-np.inf, np.inf], [np.inf, np.inf]])
-uav_param.att_zone = np.atleast_2d([[deg2rad(-90), deg2rad(90)], [deg2rad(-90), deg2rad(90)], [deg2rad(-120), deg2rad(120)]])
+uav_param.att_zone = np.atleast_2d([[deg2rad(-90), deg2rad(90)], [deg2rad(-90), deg2rad(90)], [deg2rad(-180), deg2rad(180)]])
 '''Parameter list of the quadrotor'''
 
 '''Parameter list of the attitude controller'''
@@ -158,7 +158,7 @@ if __name__ == '__main__':
                     print('Sumr:  ', sumr)
                     sumr_list.append(sumr)
                     sumr = 0.
-                    env.reset_uav_att_ctrl_RL_tracking(random_trajectroy=True,
+                    env.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
                                                        yaw_fixed=False,
                                                        new_att_ctrl_param=att_ctrl_param)
                 else:
@@ -204,7 +204,7 @@ if __name__ == '__main__':
                 print('   Testing...')
                 for i in range(n):
                     reset_att_ctrl_param('zero')
-                    env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=True,
+                    env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
                                                             yaw_fixed=False,
                                                             new_att_ctrl_param=att_ctrl_param)
                     test_r = 0.

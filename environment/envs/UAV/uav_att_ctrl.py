@@ -81,14 +81,14 @@ class uav_att_ctrl(UAV):
         """
         if is_random:
             A = np.array([
-                np.random.uniform(low=0, high=self.phi_max - 10 * np.pi / 180),
-                np.random.uniform(low=0, high=self.theta_max - 10 * np.pi / 180),
-                np.random.uniform(low=0, high=self.psi_max - 10 * np.pi / 180)])
+                np.random.uniform(low=0, high=self.phi_max if self.phi_max < np.pi / 3 else np.pi / 3),
+                np.random.uniform(low=0, high=self.theta_max if self.theta_max < np.pi / 3 else np.pi / 3),
+                np.random.uniform(low=0, high=self.psi_max if self.psi_max < np.pi / 2 else np.pi / 2)])
             T = np.random.uniform(low=3, high=6, size=3)  # 随机生成周期
             phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
         else:
             A = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
-            T = np.array([5, 5, 5])
+            T = np.array([3, 3, 3])
             phi0 = np.array([np.pi / 2, 0., 0.])
 
         if yaw_fixed:
