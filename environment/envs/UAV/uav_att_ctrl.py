@@ -44,15 +44,18 @@ class uav_att_ctrl(UAV):
         @param action:  三个力矩
         @return:
         """
-        action_4_uav = np.insert(action, 0, 0)
+        action_4_uav = np.insert(action, 0, self.m * self.g / (np.cos(self.phi) * np.cos(self.theta)))
         data_block = {'time': self.time,                    # simulation time
                       'control': action_4_uav,              # actual control command
                       'ref_angle': self.ref,                # reference angle
+                      'ref_dot_angle': self.dot_ref,        # reference dot angle
                       'ref_pos': np.zeros(3),               # set to zero for attitude control
                       'ref_vel': np.zeros(3),               # set to zero for attitude control
                       'd_out': np.zeros(3),                 # set to zero for attitude control
                       'd_out_obs': np.zeros(3),             # set to zero for attitude control
-                      'state': self.uav_state_call_back()}  # quadrotor state
+                      'state': self.uav_state_call_back(),  # UAV state
+                      'dot_angle': self.uav_dot_att()       # UAV dot angle
+                      }
         self.collector.record(data_block)
         self.rk44(action=action_4_uav, dis=np.zeros(3), n=1, att_only=True)
 
@@ -76,17 +79,16 @@ class uav_att_ctrl(UAV):
         @param yaw_fixed:	偏航角固定
         @return:			None
         """
-        center = np.zeros(3)    # 默认姿态范围对称
         if is_random:
             A = np.array([
-                np.random.uniform(low=0, high=self.phi_max - center[0]),
-                np.random.uniform(low=0, high=self.theta_max - center[1]),
-                np.random.uniform(low=0, high=self.psi_max - center[2])])
+                np.random.uniform(low=0, high=self.phi_max - 10 * np.pi / 180),
+                np.random.uniform(low=0, high=self.theta_max - 10 * np.pi / 180),
+                np.random.uniform(low=0, high=self.psi_max - 10 * np.pi / 180)])
             T = np.random.uniform(low=3, high=6, size=3)  # 随机生成周期
             phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
         else:
-            A = np.pi / 3 * np.ones(3)
-            T = np.array([6., 6., 10])
+            A = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
+            T = np.array([5, 5, 5])
             phi0 = np.array([np.pi / 2, 0., 0.])
 
         if yaw_fixed:
@@ -95,7 +97,7 @@ class uav_att_ctrl(UAV):
 
         self.ref_att_amplitude = A
         self.ref_att_period = T
-        self.ref_att_bias_a = center
+        self.ref_att_bias_a = np.zeros(3)
         self.ref_att_bias_phase = phi0
         self.att_trajectory = self.generate_ref_att_trajectory(self.ref_att_amplitude, self.ref_att_period, self.ref_att_bias_a, self.ref_att_bias_phase)
 

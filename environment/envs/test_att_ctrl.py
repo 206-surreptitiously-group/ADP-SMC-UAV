@@ -48,7 +48,7 @@ if __name__ == '__main__':
 	'''1. Define a controller'''
 	att_ctrl = uav_att_ctrl(uav_param, att_ctrl_param)
 
-	NUM_OF_SIMULATION = 1
+	NUM_OF_SIMULATION = 5
 	cnt = 0
 
 	while cnt < NUM_OF_SIMULATION:
@@ -70,6 +70,11 @@ if __name__ == '__main__':
 			# torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=dot2_rhod)
 			torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=None)
 			att_ctrl.update(action=torque)
+
+			att_ctrl.att_image = att_ctrl.att_image_copy.copy()
+			att_ctrl.draw_att(rhod)
+			att_ctrl.show_att_image(iswait=False)
+
 		cnt += 1
 		# print('Finish...')
 		# SAVE = False
@@ -79,7 +84,9 @@ if __name__ == '__main__':
 		# 				datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '/')
 		# 	os.mkdir(new_path)
 		# 	att_ctrl.collector.package2file(path=new_path)
+
 		att_ctrl.collector.plot_att()
+		att_ctrl.collector.plot_dot_att()
 		att_ctrl.collector.plot_pqr()
 		att_ctrl.collector.plot_torque()
 		plt.show()

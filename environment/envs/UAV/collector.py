@@ -6,14 +6,16 @@ import matplotlib.pyplot as plt
 class data_collector:
     def __init__(self, N: int):
         self.N = N
-        self.t = np.zeros((self.N, 1)).astype(float)
-        self.control = np.zeros((self.N, 4)).astype(float)
-        self.ref_angle = np.zeros((self.N, 3)).astype(float)
-        self.ref_pos = np.zeros((self.N, 3)).astype(float)
-        self.ref_vel = np.zeros((self.N, 3)).astype(float)
-        self.d_out = np.zeros((self.N, 3)).astype(float)
-        self.d_out_obs = np.zeros((self.N, 3)).astype(float)
-        self.state = np.zeros((self.N, 12)).astype(float)
+        self.t = np.zeros((self.N, 1)).astype(float)                # 时间
+        self.control = np.zeros((self.N, 4)).astype(float)          # 控制输入
+        self.ref_angle = np.zeros((self.N, 3)).astype(float)        # 参考姿态角
+        self.ref_dot_angle = np.zeros((self.N, 3)).astype(float)    # 参考姿态角一阶导数
+        self.ref_pos = np.zeros((self.N, 3)).astype(float)          # 参考位置
+        self.ref_vel = np.zeros((self.N, 3)).astype(float)          # 参考速度
+        self.d_out = np.zeros((self.N, 3)).astype(float)            # 干扰
+        self.d_out_obs = np.zeros((self.N, 3)).astype(float)        # 观测器输出
+        self.state = np.zeros((self.N, 12)).astype(float)           # 无人机状态
+        self.dot_angle = np.zeros((self.N, 3)).astype(float)
         self.index = 0
         self.name = ['uav_state.csv', 'ref_cmd.csv', 'control.csv', 'observe.csv']
 
@@ -22,11 +24,13 @@ class data_collector:
             self.t[self.index][0] = data['time']
             self.control[self.index] = data['control']
             self.ref_angle[self.index] = data['ref_angle']
+            self.ref_dot_angle[self.index] = data['ref_dot_angle']
             self.ref_pos[self.index] = data['ref_pos']
             self.ref_vel[self.index] = data['ref_vel']
             self.d_out[self.index] = data['d_out']
             self.d_out_obs[self.index] = data['d_out_obs']
             self.state[self.index] = data['state']
+            self.dot_angle[self.index] = data['dot_angle']
             self.index += 1
 
     def reset(self, N: int):
@@ -34,20 +38,26 @@ class data_collector:
         self.t = np.zeros((self.N, 1)).astype(float)
         self.control = np.zeros((self.N, 4)).astype(float)
         self.ref_angle = np.zeros((self.N, 3)).astype(float)
+        self.ref_dot_angle = np.zeros((self.N, 3)).astype(float)
         self.ref_pos = np.zeros((self.N, 3)).astype(float)
         self.ref_vel = np.zeros((self.N, 3)).astype(float)
         self.d_out = np.zeros((self.N, 3)).astype(float)
         self.d_out_obs = np.zeros((self.N, 3)).astype(float)
         self.state = np.zeros((self.N, 12)).astype(float)
+        self.dot_angle = np.zeros((self.N, 3)).astype(float)
         self.index = 0
 
     def package2file(self, path: str):
-        pd.DataFrame(np.hstack((self.t, self.state)),
-                     columns=['time', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'phi', 'theta', 'psi', 'p', 'q', 'r']). \
+        pd.DataFrame(np.hstack((self.t, self.state, self.dot_angle)),
+                     columns=['time', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'phi', 'theta', 'psi', 'p', 'q', 'r', 'dot_phi', 'dot_theta', 'dot_psi']). \
             to_csv(path + self.name[0], sep=',', index=False)
 
-        pd.DataFrame(np.hstack((self.t, self.ref_pos, self.ref_vel, self.ref_angle)),
-                     columns=['time', 'ref_x', 'ref_y', 'ref_z', 'ref_vx', 'ref_vy', 'ref_vz', 'ref_phi', 'ref_theta', 'ref_psi']). \
+        pd.DataFrame(np.hstack((self.t, self.ref_pos, self.ref_vel, self.ref_angle, self.ref_dot_angle)),
+                     columns=['time',
+                              'ref_x', 'ref_y', 'ref_z',
+                              'ref_vx', 'ref_vy', 'ref_vz',
+                              'ref_phi', 'ref_theta', 'ref_psi',
+                              'ref_dot_phi', 'ref_dot_theta', 'ref_dot_psi']). \
             to_csv(path + self.name[1], sep=',', index=False)
 
         pd.DataFrame(np.hstack((self.t, self.control)),
@@ -69,8 +79,10 @@ class data_collector:
         self.ref_pos = ref_cmdData[:, 1: 4]
         self.ref_vel = ref_cmdData[:, 4: 7]
         self.ref_angle = ref_cmdData[:, 7: 10]
+        self.ref_dot_angle = ref_cmdData[:, 10: 13]
         self.d_out, self.d_out_obs = observeData[:, 1:4], observeData[:, 4:7]
         self.state = uav_stateData[:, 1: 13]
+        self.dot_angle = uav_stateData[:, 13: 16]
 
     def plot_pos(self):
         plt.figure()
@@ -185,6 +197,29 @@ class data_collector:
         plt.xlabel('time(s)')
         plt.title('r')
 
+    def plot_dot_att(self):
+        plt.figure()
+        plt.subplot(1, 3, 1)
+        plt.plot(self.t, self.ref_dot_angle[:, 0] * 180 / np.pi, 'red')
+        plt.plot(self.t, self.dot_angle[:, 0] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        plt.xlabel('time(s)')
+        plt.title('dot phi')
+
+        plt.subplot(1, 3, 2)
+        plt.plot(self.t, self.ref_dot_angle[:, 1] * 180 / np.pi, 'red')
+        plt.plot(self.t, self.dot_angle[:, 1] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        plt.xlabel('time(s)')
+        plt.title('dot theta')
+
+        plt.subplot(1, 3, 3)
+        plt.plot(self.t, self.ref_dot_angle[:, 2] * 180 / np.pi, 'red')
+        plt.plot(self.t, self.dot_angle[:, 2] * 180 / np.pi, 'blue')
+        plt.grid(True)
+        plt.xlabel('time(s)')
+        plt.title('dot psi')
+
     def plot_throttle(self):
         plt.figure()
         plt.plot(self.t, self.control[:, 0], 'red')  # 油门
@@ -212,8 +247,8 @@ class data_collector:
         plt.subplot(1, 3, 3)
         plt.plot(self.t, self.control[:, 3], 'red')  # Tz
         plt.grid(True)
-        plt.ylim((-0.3, 0.3))
-        plt.yticks(np.arange(-0.3, 0.3, 0.1))
+        plt.ylim((-1, 1))
+        plt.yticks(np.arange(-1, 1, 0.2))
         plt.xlabel('time(s)')
         plt.title('Tz')
 

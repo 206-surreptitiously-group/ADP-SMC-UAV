@@ -193,13 +193,6 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         }
         pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
 
-    def state_norm_batch(self, cur_data: np.ndarray, next_data: np.ndarray):
-        ll = len(cur_data)
-        for i in range(ll):
-            cur_data[i] = self.current_state_norm(cur_data[i], update=True)
-            next_data[i] = self.next_state_norm(next_data[i], update=True)
-        return cur_data, next_data
-
     def load_norm_normalizer_from_file(self, path, file):
         data = pd.read_csv(path + file, header=0).to_numpy()
         self.current_state_norm.running_ms.n = data[0, 0]

@@ -10,7 +10,7 @@ import pandas as pd
 
 
 class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
-    def __init__(self, _uav_param: uav_param, _uav_att_param: fntsmc_param, _uav_pos_param: fntsmc_param):
+    def __init__(self, _uav_param: uav_param, _uav_att_param: fntsmc_param):
         rl_base.__init__(self)
         uav_att_ctrl.__init__(self, _uav_param, _uav_att_param)
 
@@ -37,7 +37,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
         self.action_dim = 3 + 3 + 1 + 1  # 3 for k1, 3 for k2, 1 for gamma, 1 for lambda
         self.action_step = [None for _ in range(self.action_dim)]
-        self.action_range = [[0, np.inf] for _ in range(self.action_dim)]
+        self.action_range = [[0, 3.0] for _ in range(self.action_dim)]
         self.action_num = [math.inf for _ in range(self.action_dim)]
         self.action_space = [None for _ in range(self.action_dim)]
         self.isActionContinuous = [True for _ in range(self.action_dim)]
@@ -45,7 +45,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
         self.reward = 0.
         self.Q_att = np.array([1., 1., 1.])  # 位置误差惩罚
-        self.Q_pqr = np.array([0.05, 0.05, 0.05])  # 速度误差惩罚
+        self.Q_pqr = np.array([0.01, 0.01, 0.01])  # 速度误差惩罚
         self.R = np.array([0.01, 0.01, 0.01])  # 期望加速度输出 (即控制输出) 惩罚
         self.is_terminal = False
         self.terminal_flag = 0
@@ -53,7 +53,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
     def get_state(self) -> np.ndarray:
         e_att_ = self.uav_att() - self.ref
-        e_pqr_ = self.uav_pqr() - self.dot_ref
+        e_pqr_ = self.uav_dot_att() - self.dot_ref
         state = np.concatenate((e_att_, e_pqr_))
         return state
 
@@ -63,7 +63,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 		@return:
 		"""
         _e_att = self.uav_att() - self.ref
-        _e_pqr = self.uav_pqr() - self.dot_ref
+        _e_pqr = self.uav_dot_att() - self.dot_ref
 
         '''reward for position error'''
         u_att = -np.dot(_e_att ** 2, self.Q_att)
@@ -76,14 +76,6 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
         '''reward for att out!!'''
         u_extra = 0.
-        if self.terminal_flag == 2:  # 位置出界
-            # print('Position out')
-            '''
-				给出界时刻的位置、速度、输出误差的累计
-			'''
-            _n = (self.time_max - self.time) / self.dt
-            u_extra = _n * (u_att + u_pqr + u_acc)
-
         if self.terminal_flag == 3:
             print('Attitude out')
             '''
@@ -110,8 +102,6 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
             self.is_terminal = False
         elif self.terminal_flag == 1:  # 超时
             self.is_terminal = True
-        elif self.terminal_flag == 2:  # 位置，姿态控制中不考虑位置变化
-            self.is_terminal = False
         elif self.terminal_flag == 3:  # 姿态
             self.is_terminal = True
         else:
@@ -119,13 +109,11 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
     def step_update(self, action: list):
         """
-		@param action:	这个 action 其实是油门 + 三个力矩
+		@param action:	这个 action 是三个力矩
 		@return:
 		"""
         self.current_action = np.array(action)
-        self.current_action[0] = self.m * self.g / (np.cos(self.phi) * np.cos(self.theta))      # 永远将油门设置为悬停
         self.current_state = self.get_state()
-
         self.update(action=self.current_action)
         self.is_Terminal()
         self.next_state = self.get_state()

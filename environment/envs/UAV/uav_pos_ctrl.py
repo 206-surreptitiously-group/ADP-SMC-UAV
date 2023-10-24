@@ -101,11 +101,14 @@ class uav_pos_ctrl(UAV):
         data_block = {'time': self.time,  # simulation time
                       'control': action,  # actual control command
                       'ref_angle': self.att_ref,  # reference angle
+                      'ref_dot_angle': self.dot_att_ref,
                       'ref_pos': self.pos_ref,
                       'ref_vel': self.dot_pos_ref,
                       'd_out': self.dis / self.m,
                       'd_out_obs': self.obs,
-                      'state': self.uav_state_call_back()}  # quadrotor state
+                      'state': self.uav_state_call_back(),
+                      'dot_angle': self.uav_dot_att()
+                      }  # quadrotor state
         self.collector.record(data_block)
         self.rk44(action=action, dis=self.dis, n=1, att_only=False)
 

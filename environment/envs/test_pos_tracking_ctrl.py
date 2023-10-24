@@ -63,22 +63,22 @@ pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
 pos_ctrl_param.saturation = np.array([np.inf, np.inf, np.inf])
 '''Parameter list of the position controller'''
 
-ALL_ZERO = False
-if ALL_ZERO:
-    pos_ctrl_param.k1 = 0.01 * np.ones(3)
-    pos_ctrl_param.k2 = 0.01 * np.ones(3)
-    pos_ctrl_param.gamma = 0.01 * np.ones(3)
-    pos_ctrl_param.lmd = 0.01 * np.ones(3)
-else:
-    pos_ctrl_param.k1 = np.random.random(3)
-    pos_ctrl_param.k2 = np.random.random(3)
-    pos_ctrl_param.gamma = np.random.random() * np.ones(3)
-    pos_ctrl_param.lmd = np.random.random() * np.ones(3)
+# ALL_ZERO = False
+# if ALL_ZERO:
+#     pos_ctrl_param.k1 = 0.01 * np.ones(3)
+#     pos_ctrl_param.k2 = 0.01 * np.ones(3)
+#     pos_ctrl_param.gamma = 0.01 * np.ones(3)
+#     pos_ctrl_param.lmd = 0.01 * np.ones(3)
+# else:
+#     pos_ctrl_param.k1 = np.random.random(3)
+#     pos_ctrl_param.k2 = np.random.random(3)
+#     pos_ctrl_param.gamma = np.random.random() * np.ones(3)
+#     pos_ctrl_param.lmd = np.random.random() * np.ones(3)
 
 if __name__ == '__main__':
     pos_ctrl = uav_pos_ctrl(uav_param, att_ctrl_param, pos_ctrl_param)
 
-    NUM_OF_SIMULATION = 5
+    NUM_OF_SIMULATION = 1
     cnt = 0
 
     while cnt < NUM_OF_SIMULATION:
@@ -118,10 +118,11 @@ if __name__ == '__main__':
             os.mkdir(new_path)
             pos_ctrl.collector.package2file(path=new_path)
         # pos_ctrl.collector.plot_att()
-        # # pos_ctrl.collector.plot_pqr()
+        # pos_ctrl.collector.plot_pqr()
+        # pos_ctrl.collector.plot_dot_att()
         # # pos_ctrl.collector.plot_torque()
-        # pos_ctrl.collector.plot_pos()
-        # pos_ctrl.collector.plot_vel()
+        pos_ctrl.collector.plot_pos()
+        pos_ctrl.collector.plot_vel()
         # # pos_ctrl.collector.plot_throttle()
         # # pos_ctrl.collector.plot_outer_obs()
-        # plt.show()
+        plt.show()

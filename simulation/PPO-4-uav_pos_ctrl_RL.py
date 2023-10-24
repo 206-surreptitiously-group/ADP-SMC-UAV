@@ -71,15 +71,6 @@ pos_ctrl_param.gamma = np.array([0., 0., 0.])  # 0.2
 pos_ctrl_param.lmd = np.array([0., 0., 0.])  # 2.0
 '''RL 学习初始参数'''
 
-'''传统控制参数'''
-# pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
-# pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
-# pos_ctrl_param.alpha = np.array([1.2, 1.5, 1.2])
-# pos_ctrl_param.beta = np.array([0.3, 0.3, 0.5])
-# pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
-# pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
-'''传统控制参数'''
-
 pos_ctrl_param.dim = 3
 pos_ctrl_param.dt = DT
 pos_ctrl_param.ctrl0 = np.array([0., 0., 0.])
