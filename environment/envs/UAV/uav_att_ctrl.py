@@ -88,7 +88,7 @@ class uav_att_ctrl(UAV):
             phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
         else:
             A = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
-            T = np.array([3, 3, 3])
+            T = np.array([5, 5, 5])
             phi0 = np.array([np.pi / 2, 0., 0.])
 
         if yaw_fixed:

@@ -524,13 +524,13 @@ class UAV:
 
 	def is_att_out(self) -> bool:
 		_flag = False
-		if (self.phi < self.att_zone[0][0]) or (self.phi > self.att_zone[0][1]):
+		if (self.phi < self.att_zone[0][0] + deg2rad(1)) or (self.phi > self.att_zone[0][1] - deg2rad(1)):
 			print('Phi OUT!!!!!')
 			_flag = True
-		if (self.theta < self.att_zone[1][0]) or (self.theta > self.att_zone[1][1]):
+		if (self.theta < self.att_zone[1][0] + deg2rad(1)) or (self.theta > self.att_zone[1][1] - deg2rad(1)):
 			print('Theta OUT!!!!!')
 			_flag = True
-		if (self.psi < self.att_zone[2][0]) or (self.psi > self.att_zone[2][1]):
+		if (self.psi < self.att_zone[2][0] + deg2rad(1)) or (self.psi > self.att_zone[2][1] - deg2rad(1)):
 			print('Yaw OUT!!!!!')
 			_flag = True
 		return _flag

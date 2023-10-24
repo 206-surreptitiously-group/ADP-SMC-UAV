@@ -220,6 +220,7 @@ if __name__ == '__main__':
                         _torque = env_test.att_control(_rhod, _dot_rhod, None)
                         env_test.step_update([_torque[0], _torque[1], _torque[2]])
                         test_r += env_test.reward
+
                         env_test.att_image = env_test.att_image_copy.copy()
                         env_test.draw_att(_rhod)
                         env_test.show_att_image(iswait=False)

@@ -82,7 +82,16 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 				给出界时刻的位置、速度、输出误差的累计
 			'''
             _n = (self.time_max - self.time) / self.dt
-            u_extra = _n * (u_att + u_pqr + u_acc)
+            '''这里把三个姿态的累计惩罚分开'''
+            _u_phi = _u_theta = _u_psi = 0.
+            if self.phi > self.phi_max or self.phi < self.phi_min:
+                _u_phi = -np.pi ** 2 * self.Q_att[0]
+            if self.theta > self.theta_max or self.theta < self.theta_min:
+                _u_theta = -np.pi ** 2 * self.Q_att[1]
+            if self.psi > self.psi_max or self.psi < self.psi_min:
+                _u_theta = -4 * np.pi ** 2 * self.Q_att[2]
+
+            u_extra = _n * (_u_phi + _u_theta + _u_psi + u_pqr + u_acc)
 
         self.reward = u_att + u_pqr + u_acc + u_extra
 
@@ -98,7 +107,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
 
     def is_Terminal(self, param=None):
         self.terminal_flag = self.get_terminal_flag()
-        if self.terminal_flag == 0:  # 普通状态
+        if self.terminal_flag == 0 or self.terminal_flag == 2:  # 普通状态
             self.is_terminal = False
         elif self.terminal_flag == 1:  # 超时
             self.is_terminal = True
@@ -128,9 +137,9 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
             print('ERROR!!!!')
         for i in range(3):
             if action_from_actor[i] > 0:
-                self.att_ctrl.k1[i] = action_from_actor[i]      # k11 k12 k13
+                self.att_ctrl.k1[i] = 10 * action_from_actor[i]      # k11 k12 k13
             if action_from_actor[i + 3] > 0:
-                self.att_ctrl.k2[i] = action_from_actor[i + 3]  # k21 k22 k23
+                self.att_ctrl.k2[i] = action_from_actor[i + 3] / 10  # k21 k22 k23
         if action_from_actor[6] > 0:
             self.att_ctrl.gamma[:] = action_from_actor[6]       # gamma gamma gamma
         if action_from_actor[7] > 0:

@@ -52,7 +52,7 @@ if __name__ == '__main__':
 	cnt = 0
 
 	while cnt < NUM_OF_SIMULATION:
-		att_ctrl.reset_uav_att_ctrl(random_att_trajectory=True, yaw_fixed=False, new_att_ctrl_param=None)
+		att_ctrl.reset_uav_att_ctrl(random_att_trajectory=False, yaw_fixed=False, new_att_ctrl_param=None)
 		att_ctrl.show_att_image(iswait=True)
 		if cnt % 1 == 0:
 			print('Current:', cnt)
@@ -70,10 +70,13 @@ if __name__ == '__main__':
 			# torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=dot2_rhod)
 			torque = att_ctrl.att_control(ref=rhod, dot_ref=dot_rhod, dot2_ref=None)
 			att_ctrl.update(action=torque)
+			# att_ctrl.phi = 0.
+			# att_ctrl.theta = 0.
+			# att_ctrl.psi  = deg2rad(5) * att_ctrl.time / DT
 
 			att_ctrl.att_image = att_ctrl.att_image_copy.copy()
 			att_ctrl.draw_att(rhod)
-			att_ctrl.show_att_image(iswait=False)
+			att_ctrl.show_att_image(iswait=True)
 
 		cnt += 1
 		# print('Finish...')
