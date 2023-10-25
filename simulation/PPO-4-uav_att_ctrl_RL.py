@@ -92,7 +92,7 @@ if __name__ == '__main__':
     simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
     os.mkdir(simulationPath)
     c = cv.waitKey(1)
-    TRAIN = True  # 直接训练
+    TRAIN = False  # 直接训练
     RETRAIN = False  # 基于之前的训练结果重新训练
     TEST = not TRAIN
 
@@ -164,8 +164,7 @@ if __name__ == '__main__':
                 else:
                     env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
                     a, a_log_prob = agent.choose_action(env.current_state)
-                    # new_SMC_param = agent.action_linear_trans(a)	# a 肯定在 [-1, 1]
-                    new_SMC_param = a.copy()
+                    new_SMC_param = a * np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
                     env.get_param_from_actor(new_SMC_param)
 
                     rhod, dot_rhod, dot2_rhod, _ = ref_inner(env.time,
@@ -210,7 +209,7 @@ if __name__ == '__main__':
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env.current_state_norm(env_test.current_state, update=False))
-                        _new_SMC_param = _a.copy()
+                        _new_SMC_param = _a * np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
                         env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                         _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
                                                            env_test.ref_att_amplitude,
@@ -254,4 +253,68 @@ if __name__ == '__main__':
             t_epoch += 1
             print('~~~~~~~~~~  Training End ~~~~~~~~~~')
     else:
-        pass
+        coefficient = np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
+        opt_actor = PPOActor_Gaussian(state_dim=env_test.state_dim,
+                                      action_dim=env_test.action_dim,
+                                      a_min=np.array(env_test.action_range)[:, 0],
+                                      a_max=np.array(env_test.action_range)[:, 1],
+                                      init_std=0.01,
+                                      use_orthogonal_init=True)
+        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/attitude_tracking/nets/draw_and_opt/'
+        opt_actor.load_state_dict(torch.load(optPath + 'actor'))  # 测试时，填入测试actor网络
+        agent = PPO(env=env_test, actor=opt_actor, path=optPath)
+        env_test.load_norm_normalizer_from_file(optPath, 'state_norm.csv')
+
+        n = 10
+        for i in range(n):
+            opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
+            reset_att_ctrl_param('zero')
+            env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
+                                                    yaw_fixed=False,
+                                                    new_att_ctrl_param=att_ctrl_param,
+                                                    outer_param=None)
+            test_r = 0.
+            while not env_test.is_terminal:
+                _a = agent.evaluate(env_test.current_state_norm(env_test.current_state, update=False))
+                _new_SMC_param = _a.copy()
+                opt_SMC_para = np.insert(opt_SMC_para,
+                                         opt_SMC_para.shape[0],
+                                         _new_SMC_param * coefficient,
+                                         axis=0)
+                env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
+                                                   env_test.ref_att_amplitude,
+                                                   env_test.ref_att_period,
+                                                   env_test.ref_att_bias_a,
+                                                   env_test.ref_att_bias_phase)
+                _torque = env_test.att_control(_rhod, _dot_rhod, None)
+                env_test.step_update([_torque[0], _torque[1], _torque[2]])
+                test_r += env_test.reward
+
+                env_test.att_image = env_test.att_image_copy.copy()
+                env_test.draw_att(_rhod)
+                env_test.show_att_image(iswait=False)
+            print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
+            (pd.DataFrame(opt_SMC_para,
+                          columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
+             to_csv(simulationPath + 'opt_smc_param.csv', sep=',', index=False))
+
+            env_test.collector.package2file(simulationPath)
+            env_test.collector.plot_att()
+            env_test.collector.plot_dot_att()
+            # env_test.collector.plot_torque()
+            opt_SMC_para = np.delete(opt_SMC_para, 0, axis=0)
+            xx = np.arange(opt_SMC_para.shape[0])
+            plt.figure()
+            plt.grid(True)
+            plt.plot(xx, opt_SMC_para[:, 0], label='k11')
+            plt.plot(xx, opt_SMC_para[:, 1], label='k12')
+            plt.plot(xx, opt_SMC_para[:, 2], label='k13')
+            plt.plot(xx, opt_SMC_para[:, 3], label='k21')
+            plt.plot(xx, opt_SMC_para[:, 4], label='k22')
+            plt.plot(xx, opt_SMC_para[:, 5], label='k23')
+            plt.plot(xx, opt_SMC_para[:, 6], label='gamma')
+            plt.plot(xx, opt_SMC_para[:, 7], label='lambda')
+            plt.legend()
+
+            plt.show()

@@ -148,14 +148,15 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
     def reset_uav_att_ctrl_RL_tracking(self,
                                        random_trajectroy: bool = False,
                                        yaw_fixed: bool = False,
-                                       new_att_ctrl_param: fntsmc_param = None):
+                                       new_att_ctrl_param: fntsmc_param = None,
+                                       outer_param:list = None):
         """
         @param random_trajectroy:
         @param yaw_fixed:
         @param new_att_ctrl_param:
         @return:
         """
-        self.reset_uav_att_ctrl(random_trajectroy, yaw_fixed, new_att_ctrl_param)
+        self.reset_uav_att_ctrl(random_trajectroy, yaw_fixed, new_att_ctrl_param, outer_param)
 
         '''RL_BASE'''
         self.current_state = self.get_state()

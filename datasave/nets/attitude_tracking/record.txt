@@ -1,0 +1,11 @@
+训练分为两次。
+第一次：
+	std: 0.5		actor_lr: 1e-4		critic_lr: 1e-3
+第二次：
+	std: 0.2		actor_lr: 5e-5		critic_lr: 5e-4
+	
+其中，第二次的 2350 次最好，控制和画图都可以用这个
+
+控制测试 和 对比仿真都可以使用 att_maybe_optimal2 的 2350。
+存放在 ./nets/draw_and_opt 里面
+

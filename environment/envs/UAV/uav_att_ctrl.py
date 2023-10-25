@@ -1,3 +1,5 @@
+import numpy as np
+
 from collector import data_collector
 from FNTSMC import fntsmc_att, fntsmc_param
 from uav import UAV, uav_param
@@ -73,27 +75,32 @@ class uav_att_ctrl(UAV):
         r_psi = _bias_a[2] + _amplitude[2] * np.sin(2 * np.pi / _period[2] * t + _bias_phase[2])
         return np.vstack((r_phi, r_theta, r_psi)).T
 
-    def generate_random_att_trajectory(self, is_random: bool = False, yaw_fixed: bool = False):
+    def generate_random_att_trajectory(self, is_random: bool = False, yaw_fixed: bool = False, outer_param: list = None):
         """
-        @param is_random:	随机在振幅与周期
-        @param yaw_fixed:	偏航角固定
-        @return:			None
+        @param is_random:       random trajectory or not
+        @param yaw_fixed:       fix the yaw angle or not
+        @param outer_param:     choose whether accept user-defined trajectory parameters or not
+        @return:                None
         """
-        if is_random:
-            A = np.array([
-                np.random.uniform(low=0, high=self.phi_max if self.phi_max < np.pi / 3 else np.pi / 3),
-                np.random.uniform(low=0, high=self.theta_max if self.theta_max < np.pi / 3 else np.pi / 3),
-                np.random.uniform(low=0, high=self.psi_max if self.psi_max < np.pi / 2 else np.pi / 2)])
-            T = np.random.uniform(low=3, high=6, size=3)  # 随机生成周期
-            phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
+        if outer_param is not None:
+            A = outer_param[0]
+            T = outer_param[1]
+            phi0 = outer_param[2]
         else:
-            A = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
-            T = np.array([5, 5, 5])
-            phi0 = np.array([np.pi / 2, 0., 0.])
-
-        if yaw_fixed:
-            A[2] = 0.
-            phi0[2] = 0.
+            if is_random:
+                A = np.array([
+                    np.random.uniform(low=0, high=self.phi_max if self.phi_max < np.pi / 3 else np.pi / 3),
+                    np.random.uniform(low=0, high=self.theta_max if self.theta_max < np.pi / 3 else np.pi / 3),
+                    np.random.uniform(low=0, high=self.psi_max if self.psi_max < np.pi / 2 else np.pi / 2)])
+                T = np.random.uniform(low=3, high=6, size=3)  # 随机生成周期
+                phi0 = np.random.uniform(low=0, high=np.pi / 2, size=3)
+            else:
+                A = np.array([np.pi / 3, np.pi / 3, np.pi / 2])
+                T = np.array([5, 5, 5])
+                phi0 = np.array([np.pi / 2, 0., 0.])
+            if yaw_fixed:
+                A[2] = 0.
+                phi0[2] = 0.
 
         self.ref_att_amplitude = A
         self.ref_att_period = T
@@ -114,7 +121,8 @@ class uav_att_ctrl(UAV):
     def reset_uav_att_ctrl(self,
                            random_att_trajectory: bool = False,
                            yaw_fixed: bool = False,
-                           new_att_ctrl_param: fntsmc_param = None):
+                           new_att_ctrl_param: fntsmc_param = None,
+                           outer_param: list = None):
         """
         @param random_att_trajectory:
         @param yaw_fixed:
@@ -122,7 +130,7 @@ class uav_att_ctrl(UAV):
         @return:
         """
         '''1. generate random trajectory'''
-        self.generate_random_att_trajectory(is_random=random_att_trajectory, yaw_fixed=yaw_fixed)
+        self.generate_random_att_trajectory(is_random=random_att_trajectory, yaw_fixed=yaw_fixed, outer_param=outer_param)
 
         '''2. reset uav randomly or not'''
         self.reset_uav()
