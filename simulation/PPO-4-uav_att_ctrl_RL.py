@@ -268,11 +268,12 @@ if __name__ == '__main__':
         n = 10
         for i in range(n):
             opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
-            reset_att_ctrl_param('zero')
+            reset_att_ctrl_param('optimal')
+            yyf = [deg2rad(60) * np.ones(3), 5 * np.ones(3), np.array([0, np.pi / 2, np.pi / 2])]
             env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
                                                     yaw_fixed=False,
                                                     new_att_ctrl_param=att_ctrl_param,
-                                                    outer_param=None)
+                                                    outer_param=yyf)
             test_r = 0.
             while not env_test.is_terminal:
                 _a = agent.evaluate(env_test.current_state_norm(env_test.current_state, update=False))
@@ -281,7 +282,7 @@ if __name__ == '__main__':
                                          opt_SMC_para.shape[0],
                                          _new_SMC_param * coefficient,
                                          axis=0)
-                env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                # env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                 _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
                                                    env_test.ref_att_amplitude,
                                                    env_test.ref_att_period,
