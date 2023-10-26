@@ -269,7 +269,7 @@ if __name__ == '__main__':
         for i in range(n):
             opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
             reset_att_ctrl_param('optimal')
-            yyf = [deg2rad(60) * np.ones(3), 5 * np.ones(3), np.array([0, np.pi / 2, np.pi / 2])]
+            yyf = [deg2rad(80) * np.ones(3), 5 * np.ones(3), np.array([0, -np.pi / 2, np.pi / 2])]
             env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
                                                     yaw_fixed=False,
                                                     new_att_ctrl_param=att_ctrl_param,
