@@ -1,3 +1,5 @@
+import numpy as np
+
 from uav import UAV, uav_param
 from collector import data_collector
 from FNTSMC import fntsmc_att, fntsmc_pos, fntsmc_param
@@ -149,31 +151,35 @@ class uav_pos_ctrl(UAV):
         self.ref_bias_a = _ref_bias_a
         self.ref_bias_phase = np.zeros(4)
 
-    def generate_random_trajectory(self, is_random: bool = False, yaw_fixed: bool = True):
+    def generate_random_trajectory(self, is_random: bool = False, yaw_fixed: bool = True, outer_param:list = None):
         """
         @param is_random:	随机在振幅与周期
         @param yaw_fixed:	偏航角固定
         @return:			None
         """
         center = np.concatenate((np.mean(self.pos_zone, axis=1), [np.mean(self.att_zone[2])]))
-        if is_random:
-            A = np.array([
-                np.random.uniform(low=0, high=self.x_max - center[0]),
-                np.random.uniform(low=0, high=self.y_max - center[1]),
-                np.random.uniform(low=0, high=self.z_max - center[2]),
-                np.random.uniform(low=0, high=self.att_zone[2][1] - center[3])
-            ])
-            T = np.random.uniform(low=8, high=10, size=4)  # 随机生成周期
-            phi0 = np.random.uniform(low=0, high=np.pi / 2, size=4)
+        if outer_param is not None:
+            A = outer_param[0]
+            T = outer_param[1]
+            phi0 = outer_param[2]
         else:
-            A = np.array([1.5, 1.5, 0.3, 0.])
+            if is_random:
+                A = np.array([
+                    np.random.uniform(low=0, high=self.x_max - center[0]),
+                    np.random.uniform(low=0, high=self.y_max - center[1]),
+                    np.random.uniform(low=0, high=self.z_max - center[2]),
+                    np.random.uniform(low=0, high=self.att_zone[2][1] - center[3])
+                ])
+                T = np.random.uniform(low=8, high=10, size=4)  # 随机生成周期
+                phi0 = np.random.uniform(low=0, high=np.pi / 2, size=4)
+            else:
+                A = np.array([1.5, 1.5, 0.3, 0.])
+                T = np.array([6., 6., 10, 10])
+                phi0 = np.array([np.pi / 2, 0., 0., 0.])
 
-            T = np.array([6., 6., 10, 10])
-            phi0 = np.array([np.pi / 2, 0., 0., 0.])
-
-        if yaw_fixed:
-            A[3] = 0.
-            phi0[3] = 0.
+            if yaw_fixed:
+                A[3] = 0.
+                phi0[3] = 0.
 
         self.ref_amplitude = A
         self.ref_period = T
@@ -241,7 +247,8 @@ class uav_pos_ctrl(UAV):
                            random_pos0: bool = False,
                            yaw_fixed: bool = False,
                            new_att_ctrl_param: fntsmc_param = None,
-                           new_pos_ctrl_parma: fntsmc_param = None):
+                           new_pos_ctrl_parma: fntsmc_param = None,
+                           outer_param: list = None):
         """
         @param yaw_fixed:
         @param random_trajectory:
@@ -251,7 +258,7 @@ class uav_pos_ctrl(UAV):
         @return:
         """
         '''1. generate random trajectory'''
-        self.generate_random_trajectory(is_random=random_trajectory, yaw_fixed=yaw_fixed)
+        self.generate_random_trajectory(is_random=random_trajectory, yaw_fixed=yaw_fixed, outer_param=outer_param)
 
         '''2. reset uav randomly or not'''
         if random_pos0:

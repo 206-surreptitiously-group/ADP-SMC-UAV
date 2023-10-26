@@ -160,7 +160,8 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
                                        random_pos0: bool = False,
                                        yaw_fixed: bool = False,
                                        new_att_ctrl_param: fntsmc_param = None,
-                                       new_pos_ctrl_parma: fntsmc_param = None):
+                                       new_pos_ctrl_parma: fntsmc_param = None,
+                                       outer_param: list = None):
         """
 		@param yaw_fixed:
 		@param random_trajectroy:
@@ -169,7 +170,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
 		@param new_pos_ctrl_parma:
 		@return:
 		"""
-        self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, yaw_fixed, new_att_ctrl_param, new_pos_ctrl_parma)
+        self.reset_uav_pos_ctrl(random_trajectroy, random_pos0, yaw_fixed, new_att_ctrl_param, new_pos_ctrl_parma, outer_param)
 
         '''RL_BASE'''
         self.current_state = self.get_state()

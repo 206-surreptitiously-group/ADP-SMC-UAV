@@ -63,12 +63,12 @@ att_ctrl_param.saturation = np.array([0.3, 0.3, 0.3])
 pos_ctrl_param = fntsmc_param()
 
 '''RL 学习初始参数'''
-pos_ctrl_param.k1 = np.array([0., 0., 0.])  # 1.2, 0.8, 0.5
-pos_ctrl_param.k2 = np.array([0., 0., 0.])  # 0.2, 0.6, 0.5
+pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
+pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
 pos_ctrl_param.alpha = np.array([1.2, 1.5, 1.2])
 pos_ctrl_param.beta = np.array([0.3, 0.3, 0.5])
-pos_ctrl_param.gamma = np.array([0., 0., 0.])  # 0.2
-pos_ctrl_param.lmd = np.array([0., 0., 0.])  # 2.0
+pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
+pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
 '''RL 学习初始参数'''
 
 pos_ctrl_param.dim = 3
@@ -224,7 +224,8 @@ if __name__ == '__main__':
                     env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                             random_pos0=True,
                                                             new_att_ctrl_param=None,
-                                                            new_pos_ctrl_parma=pos_ctrl_param)
+                                                            new_pos_ctrl_parma=pos_ctrl_param,
+                                                            outer_param=None)
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env.current_state_norm(env_test.current_state, update=False))
