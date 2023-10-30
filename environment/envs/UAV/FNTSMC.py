@@ -158,3 +158,6 @@ class fntsmc_att:
         self.s1 = np.zeros(self.dim)
         self.sigma = self.s + self.lmd * self.s1
         self.control = param.ctrl0
+
+    def fntsmc_att_get_param(self):
+        return np.concatenate((self.k1, self.k1, [self.gamma[0]], [self.lmd[0]]))

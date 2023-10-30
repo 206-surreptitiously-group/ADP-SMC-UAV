@@ -105,7 +105,7 @@ if __name__ == '__main__':
     env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,  yaw_fixed=False, new_att_ctrl_param=att_ctrl_param)
 
     reward_norm = Normalization(shape=1)
-
+    env_msg = {'state_dim': env.state_dim, 'action_dim': env.action_dim, 'name': env.name, 'action_range': env.action_range}
     if TRAIN:
         action_std_init = 0.4  # 初始探索方差
         min_action_std = 0.05  # 最小探索方差
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         t_epoch = 0  # 当前训练次数
         test_num = 0
 
-        agent = PPO(env=env,
+        agent = PPO(env_msg=env_msg,
                     actor_lr=1e-4,
                     critic_lr=1e-3,
                     gamma=0.99,
@@ -164,8 +164,7 @@ if __name__ == '__main__':
                 else:
                     env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
                     a, a_log_prob = agent.choose_action(env.current_state)
-                    new_SMC_param = a * np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
-                    env.get_param_from_actor(new_SMC_param)
+                    env.get_param_from_actor(a)
 
                     rhod, dot_rhod, dot2_rhod, _ = ref_inner(env.time,
                                                              env.ref_att_amplitude,
@@ -209,8 +208,7 @@ if __name__ == '__main__':
                     test_r = 0.
                     while not env_test.is_terminal:
                         _a = agent.evaluate(env.current_state_norm(env_test.current_state, update=False))
-                        _new_SMC_param = _a * np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
-                        env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                        env_test.get_param_from_actor(_a)  # 将控制器参数更新
                         _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
                                                            env_test.ref_att_amplitude,
                                                            env_test.ref_att_period,
@@ -262,7 +260,7 @@ if __name__ == '__main__':
                                       use_orthogonal_init=True)
         optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/attitude_tracking/nets/draw_and_opt/'
         opt_actor.load_state_dict(torch.load(optPath + 'actor'))  # 测试时，填入测试actor网络
-        agent = PPO(env=env_test, actor=opt_actor, path=optPath)
+        agent = PPO(env_msg=env_msg, actor=opt_actor, path=optPath)
         env_test.load_norm_normalizer_from_file(optPath, 'state_norm.csv')
 
         n = 10

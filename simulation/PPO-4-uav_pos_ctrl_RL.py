@@ -63,12 +63,12 @@ att_ctrl_param.saturation = np.array([0.3, 0.3, 0.3])
 pos_ctrl_param = fntsmc_param()
 
 '''RL 学习初始参数'''
-pos_ctrl_param.k1 = np.array([1.2, 0.8, 0.5])
-pos_ctrl_param.k2 = np.array([0.2, 0.6, 0.5])
+pos_ctrl_param.k1 = np.array([0., 0., 0.])  # 1.2, 0.8, 0.5
+pos_ctrl_param.k2 = np.array([0., 0., 0.])  # 0.2, 0.6, 0.5
 pos_ctrl_param.alpha = np.array([1.2, 1.5, 1.2])
 pos_ctrl_param.beta = np.array([0.3, 0.3, 0.5])
-pos_ctrl_param.gamma = np.array([0.2, 0.2, 0.2])
-pos_ctrl_param.lmd = np.array([2.0, 2.0, 2.0])
+pos_ctrl_param.gamma = np.array([0., 0., 0.])  # 0.2
+pos_ctrl_param.lmd = np.array([0., 0., 0.])  # 2.0
 '''RL 学习初始参数'''
 
 pos_ctrl_param.dim = 3
@@ -113,33 +113,32 @@ if __name__ == '__main__':
 
     env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
     reset_pos_ctrl_param('zero')
-    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
+    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
     env.show_image(True)
 
     env_test = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
     reset_pos_ctrl_param('zero')
-    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
+    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
 
     reward_norm = Normalization(shape=1)
-    reward_scale = RewardScaling(shape=1, gamma=0.99)
+    # reward_scale = RewardScaling(shape=1, gamma=0.99)
+
+    env_msg = {'state_dim': env.state_dim, 'action_dim': env.action_dim, 'name': env.name, 'action_range': env.action_range}
 
     if TRAIN:
         action_std_init = 0.4  # 初始探索方差
         min_action_std = 0.05  # 最小探索方差
         max_train_steps = int(5e6)
         buffer_size = int(env.time_max / env.dt) * 2
-        K_epochs = 50
-        timestep = 0
+        # K_epochs = 50
         t_epoch = 0  # 当前训练次数
-        # action_std_decay_freq = int(2500)	# 每训练 若干 次，减小一次探索方差
-        # action_std_decay_rate = 0.05  # 每次减小方差的数值
         test_num = 0
 
-        agent = PPO(env=env,
+        agent = PPO(env_msg=env_msg,
                     actor_lr=1e-4,
                     critic_lr=1e-3,
                     gamma=0.99,
-                    K_epochs=K_epochs,
+                    K_epochs=50,
                     eps_clip=0.2,
                     action_std_init=action_std_init,
                     buffer_size=buffer_size,
@@ -179,10 +178,15 @@ if __name__ == '__main__':
                     print('Sumr:  ', sumr)
                     sumr_list.append(sumr)
                     sumr = 0.
+                    yyf_A = 1.5 * np.random.choice([-1, 1], 4)
+                    yyf_T = 5 * np.ones(4)
+                    yyf_phi0 = np.pi / 2 * np.random.choice([-1, 0, 1], 4)
+                    yyf = [yyf_A, yyf_T, yyf_phi0]
                     env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
-                                                       random_pos0=True,
+                                                       random_pos0=False,
                                                        new_att_ctrl_param=None,
-                                                       new_pos_ctrl_parma=pos_ctrl_param)
+                                                       new_pos_ctrl_parma=pos_ctrl_param,
+                                                       outer_param=None)
                 else:
                     env.current_state = env.next_state.copy()  # 此时相当于时间已经来到了下一拍，所以 current 和 next 都得更新
                     a, a_log_prob = agent.choose_action(env.current_state)
@@ -221,8 +225,12 @@ if __name__ == '__main__':
                 print('   Testing...')
                 for i in range(n):
                     reset_pos_ctrl_param('zero')
-                    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
-                                                            random_pos0=True,
+                    _yyf_A = 1.5 * np.random.choice([-1, 1], 4)
+                    _yyf_T = 5 * np.ones(4)
+                    _yyf_phi0 = np.pi / 2 * np.random.choice([-1, 0, 1], 4)
+                    _yyf = [_yyf_A, _yyf_T, _yyf_phi0]
+                    env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
+                                                            random_pos0=False,
                                                             new_att_ctrl_param=None,
                                                             new_pos_ctrl_parma=pos_ctrl_param,
                                                             outer_param=None)
@@ -275,9 +283,9 @@ if __name__ == '__main__':
                                       a_max=np.array(env_test.action_range)[:, 1],
                                       init_std=0.5,
                                       use_orthogonal_init=True)
-        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/position_tracking/nets/opt2/'
+        optPath = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/position_tracking/nets/pos_new1-260/'
         opt_actor.load_state_dict(torch.load(optPath + 'actor'))  # 测试时，填入测试actor网络
-        agent = PPO(env=env_test, actor=opt_actor, path=optPath)
+        agent = PPO(env_msg=env_msg, actor=opt_actor, path=optPath)
         env_test.load_norm_normalizer_from_file(optPath, 'state_norm.csv')
         # exit(0)
         n = 10
@@ -285,9 +293,10 @@ if __name__ == '__main__':
             opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
             reset_pos_ctrl_param('zero')
             env_test.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=True,
-                                                    random_pos0=True,
+                                                    random_pos0=False,
                                                     new_att_ctrl_param=None,
-                                                    new_pos_ctrl_parma=pos_ctrl_param)
+                                                    new_pos_ctrl_parma=pos_ctrl_param,
+                                                    outer_param=None)
             env_test.show_image(False)
             test_r = 0.
             while not env_test.is_terminal:

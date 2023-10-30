@@ -164,14 +164,19 @@ class uav_pos_ctrl(UAV):
             phi0 = outer_param[2]
         else:
             if is_random:
-                A = np.array([
-                    np.random.uniform(low=0, high=self.x_max - center[0]),
-                    np.random.uniform(low=0, high=self.y_max - center[1]),
-                    np.random.uniform(low=0, high=self.z_max - center[2]),
-                    np.random.uniform(low=0, high=self.att_zone[2][1] - center[3])
-                ])
-                T = np.random.uniform(low=8, high=10, size=4)  # 随机生成周期
-                phi0 = np.random.uniform(low=0, high=np.pi / 2, size=4)
+                a = np.random.uniform(low=0, high=1.5)
+                A = np.array([a, a, a, 0])
+                T = np.random.uniform(low=5, high=10) * np.ones(4)
+                phi0 = np.array([np.pi / 2, 0., 0., 0.])
+                # A = np.array([
+                #     np.random.uniform(low=0., high=self.x_max - center[0]),
+                #     np.random.uniform(low=0., high=self.y_max - center[1]),
+                #     np.random.uniform(low=0., high=self.z_max - center[2]),
+                #     np.random.uniform(low=0, high=self.att_zone[2][1] - center[3])
+                # ])
+                # T = np.random.uniform(low=5, high=10, size=4)  # 随机生成周期
+                # # phi0 = np.random.uniform(low=0, high=np.pi / 2, size=4)
+                # phi0 = np.array([np.pi / 2, 0., 0., 0.])
             else:
                 A = np.array([1.5, 1.5, 0.3, 0.])
                 T = np.array([6., 6., 10, 10])
@@ -250,6 +255,7 @@ class uav_pos_ctrl(UAV):
                            new_pos_ctrl_parma: fntsmc_param = None,
                            outer_param: list = None):
         """
+        @param outer_param:
         @param yaw_fixed:
         @param random_trajectory:
         @param random_pos0:

@@ -104,7 +104,7 @@ class PPOCritic(nn.Module):
 
 class Proximal_Policy_Optimization:
 	def __init__(self,
-				 env,
+				 env_msg: dict = None,
 				 actor_lr: float = 3e-4,
 				 critic_lr: float = 1e-3,
 				 gamma: float = 0.99,
@@ -117,7 +117,6 @@ class Proximal_Policy_Optimization:
 				 critic: PPOCritic = PPOCritic(),
 				 path: str = ''):
 		"""
-        @param env:                 the environment
         @param actor_lr:            actor learning rate
         @param critic_lr:           critic learning rate
         @param gamma:               discount factor
@@ -129,15 +128,15 @@ class Proximal_Policy_Optimization:
         @param critic:              critic net
         @param path:                path for data record
         """
-		self.env = env
+		self.env_msg = env_msg
 		'''PPO'''
 		self.gamma = gamma  # discount factor
 		self.K_epochs = K_epochs
 		self.eps_clip = eps_clip
 		self.action_std = action_std_init
 		self.path = path
-		self.buffer = RolloutBuffer(buffer_size, self.env.state_dim, self.env.action_dim)
-		self.buffer2 = RolloutBuffer2(self.env.state_dim, self.env.action_dim)
+		self.buffer = RolloutBuffer(buffer_size, self.env_msg['state_dim'], self.env_msg['action_dim'])
+		self.buffer2 = RolloutBuffer2(self.env_msg['state_dim'], self.env_msg['action_dim'])
 		self.actor_lr = actor_lr
 		self.critic_lr = critic_lr
 		'''PPO'''
@@ -284,22 +283,22 @@ class Proximal_Policy_Optimization:
 				p['lr'] = lr_c_now
 
 	def PPO_info(self):
-		print('agent name：', self.env.name)
-		print('state_dim:', self.env.state_dim)
-		print('action_dim:', self.env.action_dim)
-		print('action_range:', self.env.action_range)
+		print('agent name：', self.env_msg['name'])
+		print('state_dim:', self.env_msg['state_dim'])
+		print('action_dim:', self.env_msg['action_dim'])
+		print('action_range:', self.env_msg['action_range'])
 
-	def action_linear_trans(self, action):
-		# the action output
-		linear_action = []
-		for i in range(self.env.action_dim):
-			a = min(max(action[i], -1), 1)
-			maxa = self.env.action_range[i][1]
-			mina = self.env.action_range[i][0]
-			k = (maxa - mina) / 2
-			b = (maxa + mina) / 2
-			linear_action.append(k * a + b)
-		return np.array(linear_action)
+	# def action_linear_trans(self, action):
+	# 	# the action output
+	# 	linear_action = []
+	# 	for i in range(self.env.action_dim):
+	# 		a = min(max(action[i], -1), 1)
+	# 		maxa = self.env.action_range[i][1]
+	# 		mina = self.env.action_range[i][0]
+	# 		k = (maxa - mina) / 2
+	# 		b = (maxa + mina) / 2
+	# 		linear_action.append(k * a + b)
+	# 	return np.array(linear_action)
 
 	def save_ac(self, msg, path):
 		torch.save(self.actor.state_dict(), path + 'actor_' + msg)

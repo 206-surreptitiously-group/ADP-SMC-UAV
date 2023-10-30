@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     env = uav_pos_ctrl_RL(uav_param, att_ctrl_param, pos_ctrl_param)
     reset_pos_ctrl_param('zero')
-    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=True, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
+    env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False, random_pos0=False, new_att_ctrl_param=None, new_pos_ctrl_parma=pos_ctrl_param)
     env.load_norm_normalizer_from_file(testPath0, 'state_norm.csv')
     actor = PPOActor_Gaussian(state_dim=env.state_dim,
                               action_dim=env.action_dim,
@@ -154,9 +154,11 @@ if __name__ == '__main__':
                 reset_pos_ctrl_param('zero')
             A = _traj[0: 4]
             T = _traj[4: 8]
+            # A = np.array([0.2,0.2,0.2,0])
+            # T = np.ones(4) * 7
             phi0 = _traj[8: 12]
             env.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
-                                               random_pos0=True,
+                                               random_pos0=False,
                                                new_att_ctrl_param=None,
                                                new_pos_ctrl_parma=pos_ctrl_param,
                                                outer_param=[A, T, phi0])
@@ -169,16 +171,18 @@ if __name__ == '__main__':
                 env.step_update(a_4_uav)
                 test_r += env.reward
 
-                # env.att_image = env.att_image_copy.copy()
-                # env.draw_att(_rhod)
-                # env.show_att_image(iswait=False)sassa
+                # env.image = env.image_copy.copy()
+                # env.draw_3d_points_projection(np.atleast_2d([env.uav_pos(), env.pos_ref]), [Color().Red, Color().DarkGreen])
+                # env.draw_time_error(env.uav_pos(), env.pos_ref)
+                # env.show_image(False)
+            # print(test_r)
             r.append(test_r)
             att_out.append(1 if env.terminal_flag == 3 else 0)
             pos_out.append(1 if env.terminal_flag == 2 else 0)
             cnt += 1
-            if CONTROLLER == 'RL':
-                (pd.DataFrame({'r': r, 'att_out': att_out}).
-                 to_csv('./uniform_comparative_pos/uniform_mc_test_rl.csv', sep=',', index=False))
-            else:
-                (pd.DataFrame({'r': r, 'att_out': att_out}).
-                 to_csv('./uniform_comparative_pos/uniform_mc_test_smc.csv', sep=',', index=False))
+        if CONTROLLER == 'RL':
+            (pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).
+             to_csv('./uniform_comparative_pos/uniform_mc_test_rl.csv', sep=',', index=False))
+        else:
+            (pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).
+             to_csv('./uniform_comparative_pos/uniform_mc_test_smc.csv', sep=',', index=False))

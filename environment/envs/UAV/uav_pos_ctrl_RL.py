@@ -85,7 +85,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         '''reward for att out!!'''
         u_extra = 0.
         if self.terminal_flag == 2:  # 位置出界
-            # print('Position out')
+            print('Position out')
             '''
 				给出界时刻的位置、速度、输出误差的累计
 			'''
@@ -155,6 +155,12 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         if action_from_actor[7] > 0:
             self.pos_ctrl.lmd[:] = action_from_actor[7]  # lmd lmd lmd
 
+    def set_att_ctrl_from_outer(self, param: np.ndarray):
+        self.att_ctrl.k1[:] = param[0: 3]
+        self.att_ctrl.k2[:] = param[3: 6]
+        self.att_ctrl.gamma[:] = param[6]
+        self.att_ctrl.lmd[:] = param[7]
+
     def reset_uav_pos_ctrl_RL_tracking(self,
                                        random_trajectroy: bool = False,
                                        random_pos0: bool = False,
@@ -163,6 +169,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
                                        new_pos_ctrl_parma: fntsmc_param = None,
                                        outer_param: list = None):
         """
+        @param outer_param:
 		@param yaw_fixed:
 		@param random_trajectroy:
 		@param random_pos0:
@@ -181,7 +188,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         self.terminal_flag = 0
         '''RL_BASE'''
 
-    def save_state_norm(self, path):
+    def save_state_norm(self, path, msg=None):
         data = {
             'cur_n': self.current_state_norm.running_ms.n * np.ones(self.state_dim),
             'cur_mean': self.current_state_norm.running_ms.mean,
@@ -192,7 +199,10 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
             'next_std': self.next_state_norm.running_ms.std,
             'next_S': self.next_state_norm.running_ms.S,
         }
-        pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
+        if msg is None:
+            pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
+        else:
+            pd.DataFrame(data).to_csv(path + 'state_norm_' + msg + '.csv', index=False)
 
     def load_norm_normalizer_from_file(self, path, file):
         data = pd.read_csv(path + file, header=0).to_numpy()

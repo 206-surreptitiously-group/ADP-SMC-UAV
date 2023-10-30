@@ -167,7 +167,7 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
         self.terminal_flag = 0
         '''RL_BASE'''
 
-    def save_state_norm(self, path):
+    def save_state_norm(self, path, msg=None):
         data = {
             'cur_n': self.current_state_norm.running_ms.n * np.ones(self.state_dim),
             'cur_mean': self.current_state_norm.running_ms.mean,
@@ -178,7 +178,10 @@ class uav_att_ctrl_RL(rl_base, uav_att_ctrl):
             'next_std': self.next_state_norm.running_ms.std,
             'next_S': self.next_state_norm.running_ms.S,
         }
-        pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
+        if msg is None:
+            pd.DataFrame(data).to_csv(path + 'state_norm.csv', index=False)
+        else:
+            pd.DataFrame(data).to_csv(path + 'state_norm_' + msg + '.csv', index=False)
 
     def state_norm_batch(self, cur_data: np.ndarray, next_data: np.ndarray):
         ll = len(cur_data)
