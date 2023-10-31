@@ -244,13 +244,14 @@ if __name__ == '__main__':
                 temp = simulationPath + 'trainNum_{}/'.format(t_epoch)
                 os.mkdir(temp)
                 time.sleep(0.01)
-                agent.save_ac(msg='trainNum_{}'.format(t_epoch), path=temp)
+                agent.save_ac(msg=''.format(t_epoch), path=temp)
                 env.save_state_norm(temp)
             '''6. 每学习 50 次，保存一下 policy'''
 
             t_epoch += 1
             print('~~~~~~~~~~  Training End ~~~~~~~~~~')
     else:
+        # writer = cv.VideoWriter(simulationPath + 'record.mp4', cv.VideoWriter_fourcc(*"mp4v"), 150, (env_test.att_w, env_test.att_h))
         coefficient = np.array([10, 10, 10, 0.1, 0.1, 0.1, 1, 1]).astype(float)
         opt_actor = PPOActor_Gaussian(state_dim=env_test.state_dim,
                                       action_dim=env_test.action_dim,
@@ -266,12 +267,12 @@ if __name__ == '__main__':
         n = 10
         for i in range(n):
             opt_SMC_para = np.atleast_2d(np.zeros(env_test.action_dim))
-            reset_att_ctrl_param('optimal')
+            reset_att_ctrl_param('zero')
             yyf = [deg2rad(80) * np.ones(3), 5 * np.ones(3), np.array([0, -np.pi / 2, np.pi / 2])]
-            env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=False,
+            env_test.reset_uav_att_ctrl_RL_tracking(random_trajectroy=True,
                                                     yaw_fixed=False,
                                                     new_att_ctrl_param=att_ctrl_param,
-                                                    outer_param=yyf)
+                                                    outer_param=None)
             test_r = 0.
             while not env_test.is_terminal:
                 _a = agent.evaluate(env_test.current_state_norm(env_test.current_state, update=False))
@@ -280,7 +281,7 @@ if __name__ == '__main__':
                                          opt_SMC_para.shape[0],
                                          _new_SMC_param * coefficient,
                                          axis=0)
-                # env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
+                env_test.get_param_from_actor(_new_SMC_param)  # 将控制器参数更新
                 _rhod, _dot_rhod, _, _ = ref_inner(env_test.time,
                                                    env_test.ref_att_amplitude,
                                                    env_test.ref_att_period,
@@ -292,28 +293,30 @@ if __name__ == '__main__':
 
                 env_test.att_image = env_test.att_image_copy.copy()
                 env_test.draw_att(_rhod)
-                env_test.show_att_image(iswait=False)
+                # env_test.show_att_image(iswait=False)
+                # writer.write(env_test.att_image)
             print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
-            (pd.DataFrame(opt_SMC_para,
-                          columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
-             to_csv(simulationPath + 'opt_smc_param.csv', sep=',', index=False))
-
-            env_test.collector.package2file(simulationPath)
-            env_test.collector.plot_att()
-            env_test.collector.plot_dot_att()
-            # env_test.collector.plot_torque()
-            opt_SMC_para = np.delete(opt_SMC_para, 0, axis=0)
-            xx = np.arange(opt_SMC_para.shape[0])
-            plt.figure()
-            plt.grid(True)
-            plt.plot(xx, opt_SMC_para[:, 0], label='k11')
-            plt.plot(xx, opt_SMC_para[:, 1], label='k12')
-            plt.plot(xx, opt_SMC_para[:, 2], label='k13')
-            plt.plot(xx, opt_SMC_para[:, 3], label='k21')
-            plt.plot(xx, opt_SMC_para[:, 4], label='k22')
-            plt.plot(xx, opt_SMC_para[:, 5], label='k23')
-            plt.plot(xx, opt_SMC_para[:, 6], label='gamma')
-            plt.plot(xx, opt_SMC_para[:, 7], label='lambda')
-            plt.legend()
-
-            plt.show()
+            # (pd.DataFrame(opt_SMC_para,
+            #               columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']).
+            #  to_csv(simulationPath + 'opt_smc_param.csv', sep=',', index=False))
+            #
+            # env_test.collector.package2file(simulationPath)
+            # env_test.collector.plot_att()
+            # env_test.collector.plot_dot_att()
+            # # env_test.collector.plot_torque()
+            # opt_SMC_para = np.delete(opt_SMC_para, 0, axis=0)
+            # xx = np.arange(opt_SMC_para.shape[0])
+            # plt.figure()
+            # plt.grid(True)
+            # plt.plot(xx, opt_SMC_para[:, 0], label='k11')
+            # plt.plot(xx, opt_SMC_para[:, 1], label='k12')
+            # plt.plot(xx, opt_SMC_para[:, 2], label='k13')
+            # plt.plot(xx, opt_SMC_para[:, 3], label='k21')
+            # plt.plot(xx, opt_SMC_para[:, 4], label='k22')
+            # plt.plot(xx, opt_SMC_para[:, 5], label='k23')
+            # plt.plot(xx, opt_SMC_para[:, 6], label='gamma')
+            # plt.plot(xx, opt_SMC_para[:, 7], label='lambda')
+            # plt.legend()
+            #
+            # plt.show()
+        # writer.release()

@@ -270,7 +270,7 @@ if __name__ == '__main__':
                 temp = simulationPath + 'trainNum_{}/'.format(t_epoch)
                 os.mkdir(temp)
                 time.sleep(0.01)
-                agent.save_ac(msg='trainNum_{}'.format(t_epoch), path=temp)
+                agent.save_ac(msg='', path=temp)
                 env.save_state_norm(temp)
             '''6. 每学习 50 次，保存一下 policy'''
 

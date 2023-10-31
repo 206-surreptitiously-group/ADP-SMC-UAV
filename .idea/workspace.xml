@@ -7,45 +7,46 @@
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-03-21-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-03-21-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-03-21-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-03-21-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-03-21-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-08-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-08-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-08-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-08-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-08-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-19-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-19-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-19-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-19-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-04-19-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-10-20-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-10-20-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-10-20-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-10-20-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-10-20-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-04-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-04-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-04-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-04-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-04-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-13-PPO-uav_att_ctrl_RL/control.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-13-PPO-uav_att_ctrl_RL/observe.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-13-PPO-uav_att_ctrl_RL/opt_smc_param.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-13-PPO-uav_att_ctrl_RL/ref_cmd.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasave/log/2023-10-26-13-15-13-PPO-uav_att_ctrl_RL/uav_state.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/FNTSMC.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/FNTSMC.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_att_ctrl_RL.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_smc.csv" beforeDir="false" afterPath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_smc.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_pos_rl.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_pos_smc.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/monte_carlo/uniform_pos_smc.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulation/PPO-joint_training.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-joint_training.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_ref_traj.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_RL_400.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_RL_800.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_smc.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_rl.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_smc.csv" beforeDir="false" afterPath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_smc.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/surface_mesh.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug2.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-150.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-160.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-170.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-180.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-660.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-670.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-680.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-690.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-720.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-730.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-760.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-770.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-780.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-790.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-810.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-820.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-4070.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-4080.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7040.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7050.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7820.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7830.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-9060.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-9070.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new1-260.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new2-1610.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new2-1620.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_smc.csv" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,16 +78,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/study/Github/ADP-SMC-UAV/test/monte_carlo/uniform_pos_smc.py&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "D:/study/Github/ADP-SMC-UAV/simulation/PPO-joint_training.py",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
-  <component name="RunManager" selected="Python.uniform_pos_smc">
+}]]></component>
+  <component name="RunManager" selected="Python.PPO-joint_training">
     <configuration name="PPO-4-uav_att_ctrl_RL" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="ADP-SMC-UAV" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -115,12 +116,35 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="" />
+      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
+      <option name="SDK_NAME" value="Python 3.7" />
       <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="PPO-joint_training" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="ADP-SMC-UAV" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
+      <option name="SDK_NAME" value="Python 3.7" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/simulation" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-joint_training.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -136,7 +160,7 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
+      <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
@@ -150,54 +174,11 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_att_ctrl" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/environment/envs/test_att_ctrl.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="uniform_pos_smc" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/monte_carlo" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/monte_carlo/uniform_pos_smc.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <list>
       <item itemvalue="Python.PPO-4-uav_att_ctrl_RL" />
       <item itemvalue="Python.PPO-4-uav_pos_ctrl_RL" />
+      <item itemvalue="Python.PPO-joint_training" />
       <item itemvalue="Python.draft" />
-      <item itemvalue="Python.test_att_ctrl" />
-      <item itemvalue="Python.uniform_pos_smc" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />

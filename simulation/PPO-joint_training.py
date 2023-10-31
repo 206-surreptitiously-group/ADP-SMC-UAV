@@ -156,7 +156,7 @@ if __name__ == '__main__':
     simulationPath = log_dir + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H-%M-%S') + '-' + ALGORITHM + '-' + ENV + '/'
     os.mkdir(simulationPath)
 
-    TRAIN = True
+    TRAIN = False
     RETRAIN = True
     TEST = not TRAIN
 
@@ -425,6 +425,7 @@ if __name__ == '__main__':
 
         n = 10
         SMC = False
+        writer = cv.VideoWriter(simulationPath + 'record.mp4', cv.VideoWriter_fourcc(*"mp4v"), 150, (env_test.width, env_test.height))
         for i in range(n):
             opt_SMC_para_pos = np.atleast_2d(np.zeros(env_pos.action_dim))
             opt_SMC_para_att = np.atleast_2d(np.zeros(env_att.action_dim))
@@ -456,9 +457,17 @@ if __name__ == '__main__':
                 env_test.image = env_test.image_copy.copy()
                 env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
                 env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
-                env_test.show_image(False)
+                # env_test.show_image(False)
+                writer.write(env_test.image)
             print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
 
-            plot_SMC_param(opt_SMC_para_pos, 'pos')
-            plot_SMC_param(opt_SMC_para_att,'att')
-            plt.show()
+            # plot_SMC_param(opt_SMC_para_pos, 'pos')
+            # plot_SMC_param(opt_SMC_para_att,'att')
+
+            # (pd.DataFrame(opt_SMC_para_pos, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
+            #  .to_csv(simulationPath + 'opt_smc_param_pos.csv', sep=',', index=False))
+            # (pd.DataFrame(opt_SMC_para_att, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
+            #  .to_csv(simulationPath + 'opt_smc_param_att.csv', sep=',', index=False))
+            # env_test.collector.package2file(simulationPath)
+            # plt.show()
+        writer.release()
