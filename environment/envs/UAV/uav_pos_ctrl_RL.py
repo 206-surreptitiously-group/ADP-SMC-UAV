@@ -138,7 +138,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         self.next_state = self.get_state()
         self.get_reward()
 
-    def get_param_from_actor(self, action_from_actor: np.ndarray):
+    def get_param_from_actor(self, action_from_actor: np.ndarray, update_k2: bool = True):
         """
         @param action_from_actor:
         @return:
@@ -148,7 +148,7 @@ class uav_pos_ctrl_RL(rl_base, uav_pos_ctrl):
         for i in range(3):
             if action_from_actor[i] > 0:
                 self.pos_ctrl.k1[i] = action_from_actor[i]
-            if action_from_actor[i + 3] > 0:
+            if action_from_actor[i + 3] > 0 and update_k2:
                 self.pos_ctrl.k2[i] = action_from_actor[i + 3]
         if action_from_actor[6] > 0:
             self.pos_ctrl.gamma[:] = action_from_actor[6]  # gamma gamma gamma

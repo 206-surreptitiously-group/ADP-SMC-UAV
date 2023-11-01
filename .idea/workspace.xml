@@ -7,46 +7,12 @@
     <list default="true" id="6a7b31b0-6f9e-489a-aab8-a6f0c2c30736" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/algorithm/policy_base/Proximal_Policy_Optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/collector.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/collector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/ref_cmd.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/ref_cmd.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" beforeDir="false" afterPath="$PROJECT_DIR$/environment/envs/UAV/uav_pos_ctrl_RL.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation/PPO-joint_training.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/PPO-joint_training.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_ref_traj.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_RL_400.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_RL_800.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/random_comparative_att/monte_carlo_test_smc.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_rl.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_smc.csv" beforeDir="false" afterPath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/A_0-1.5_T_5-10_phi0_90-0-0-0_bias_0-0-1.5-0/uniform_mc_test_smc.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/surface_mesh.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug2.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-150.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-160.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-170.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-180.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-660.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-670.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-680.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-690.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-720.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-730.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-760.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-770.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-780.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-790.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-810.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug3-820.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-4070.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-4080.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7040.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7050.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7820.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-7830.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-9060.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_debug4-9070.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new1-260.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new2-1610.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_rl_pos_new2-1620.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/monte_carlo/uniform_comparative_pos/uniform_mc_test_smc.csv" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,54 +49,11 @@
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "D:/study/Github/ADP-SMC-UAV/simulation/PPO-joint_training.py",
+    "last_opened_file_path": "/home/yefeng/yefengGithub/ADP-SMC-UAV/simulation/systemic/mente_carlo.py",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.PPO-joint_training">
-    <configuration name="PPO-4-uav_att_ctrl_RL" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-4-uav_att_ctrl_RL.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="PPO-4-uav_pos_ctrl_RL" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-      <module name="ADP-SMC-UAV" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
-      <option name="SDK_NAME" value="Python 3.7" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-4-uav_pos_ctrl_RL.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.mente_carlo">
     <configuration name="PPO-joint_training" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="ADP-SMC-UAV" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -139,9 +62,8 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="E:\anaconda3\python.exe" />
-      <option name="SDK_NAME" value="Python 3.7" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/simulation" />
-      <option name="IS_MODULE_SDK" value="false" />
+      <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/PPO-joint_training.py" />
@@ -174,10 +96,54 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="mente_carlo" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="ADP-SMC-UAV" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.8" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/systemic/mente_carlo.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="systemic_mesh" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="ADP-SMC-UAV" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.8" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulation/systemic/systemic_mesh.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
-      <item itemvalue="Python.PPO-4-uav_att_ctrl_RL" />
-      <item itemvalue="Python.PPO-4-uav_pos_ctrl_RL" />
       <item itemvalue="Python.PPO-joint_training" />
+      <item itemvalue="Python.systemic_mesh" />
+      <item itemvalue="Python.mente_carlo" />
       <item itemvalue="Python.draft" />
     </list>
   </component>

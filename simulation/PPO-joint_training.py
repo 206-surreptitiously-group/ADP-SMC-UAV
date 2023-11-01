@@ -20,7 +20,6 @@ from algorithm.policy_base.Proximal_Policy_Optimization import PPOActor_Gaussian
 from common.common_cls import *
 from common.common_func import *
 
-
 timestep = 0
 ENV = 'joint-training'
 ALGORITHM = 'PPO'
@@ -411,21 +410,20 @@ if __name__ == '__main__':
         opt_pos = PPOActor_Gaussian(state_dim=env_test.state_dim,
                                     action_dim=env_test.action_dim)
         optPathPos = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/position_tracking/nets/pos_new1-260/'
-        opt_pos.load_state_dict(torch.load(optPathPos + 'actor'))  # 测试时，填入测试actor网络
+        opt_pos.load_state_dict(torch.load(optPathPos + 'actor'))
         agent_pos = PPO(env_msg=env_pos_msg, actor=opt_pos, path=optPathPos)
         env_test.load_norm_normalizer_from_file(optPathPos, 'state_norm.csv')
 
         opt_att = PPOActor_Gaussian(state_dim=env_att.state_dim,
                                     action_dim=env_att.action_dim)
         optPathAtt = os.path.dirname(os.path.abspath(__file__)) + '/../datasave/nets/attitude_tracking/nets/draw_and_opt/'
-        opt_att.load_state_dict(torch.load(optPathAtt + 'actor'))  # 测试时，填入测试actor网络
+        opt_att.load_state_dict(torch.load(optPathAtt + 'actor'))
         agent_att = PPO(env_msg=env_att_msg, actor=opt_att, path=optPathAtt)
         att_norm = get_normalizer_from_file(env_att.state_dim, optPathAtt, 'state_norm.csv')
-        # env_att.load_norm_normalizer_from_file(optPathAtt, 'state_norm.csv')
 
         n = 10
         SMC = False
-        writer = cv.VideoWriter(simulationPath + 'record.mp4', cv.VideoWriter_fourcc(*"mp4v"), 150, (env_test.width, env_test.height))
+        # writer = cv.VideoWriter(simulationPath + 'record.mp4', cv.VideoWriter_fourcc(*"mp4v"), 150, (env_test.width, env_test.height))
         for i in range(n):
             opt_SMC_para_pos = np.atleast_2d(np.zeros(env_pos.action_dim))
             opt_SMC_para_att = np.atleast_2d(np.zeros(env_att.action_dim))
@@ -458,16 +456,16 @@ if __name__ == '__main__':
                 env_test.draw_3d_points_projection(np.atleast_2d([env_test.uav_pos(), env_test.pos_ref]), [Color().Red, Color().DarkGreen])
                 env_test.draw_time_error(env_test.uav_pos(), env_test.pos_ref)
                 # env_test.show_image(False)
-                writer.write(env_test.image)
+                # writer.write(env_test.image)
             print('   Evaluating %.0f | Reward: %.2f ' % (i, test_r))
 
             # plot_SMC_param(opt_SMC_para_pos, 'pos')
             # plot_SMC_param(opt_SMC_para_att,'att')
 
-            # (pd.DataFrame(opt_SMC_para_pos, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
-            #  .to_csv(simulationPath + 'opt_smc_param_pos.csv', sep=',', index=False))
-            # (pd.DataFrame(opt_SMC_para_att, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
-            #  .to_csv(simulationPath + 'opt_smc_param_att.csv', sep=',', index=False))
-            # env_test.collector.package2file(simulationPath)
+            (pd.DataFrame(opt_SMC_para_pos, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
+             .to_csv(simulationPath + 'opt_smc_param_pos.csv', sep=',', index=False))
+            (pd.DataFrame(opt_SMC_para_att, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])
+             .to_csv(simulationPath + 'opt_smc_param_att.csv', sep=',', index=False))
+            env_test.collector.package2file(simulationPath)
             # plt.show()
-        writer.release()
+        # writer.release()

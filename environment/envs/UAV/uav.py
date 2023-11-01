@@ -45,6 +45,10 @@ class uav_param:
 		print('att_zone: ', self.att_zone)
 
 
+C = lambda x: np.cos(x)
+S = lambda x: np.sin(x)
+
+
 class UAV:
 	def __init__(self, param: uav_param):
 		self.m = param.m
@@ -501,7 +505,7 @@ class UAV:
 	def T_pqr_2_dot_att(self):
 		return np.array([[1, np.sin(self.phi) * np.tan(self.theta), np.cos(self.phi) * np.tan(self.theta)],
 						 [0, np.cos(self.phi), -np.sin(self.phi)],
-						 [0, np.sin(self.phi)/np.cos(self.theta), np.cos(self.phi)/np.cos(self.theta)]])
+						 [0, np.sin(self.phi) / np.cos(self.theta), np.cos(self.phi) / np.cos(self.theta)]])
 
 	def uav_dot_att(self):
 		return np.dot(self.T_pqr_2_dot_att(), self.uav_pqr())
@@ -702,3 +706,8 @@ class UAV:
 
 	def dot_eta(self):
 		return np.array([self.vx, self.vy, self.vz])
+
+	def A(self):
+		return self.throttle / self.m * np.array([C(self.phi) * C(self.psi) * S(self.theta) + S(self.phi) * S(self.psi),
+												  C(self.phi) * S(self.psi) * S(self.theta) - S(self.phi) * C(self.psi),
+												  C(self.phi) * C(self.theta)]) - np.array([0., 0., self.g])

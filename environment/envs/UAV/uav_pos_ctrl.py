@@ -1,6 +1,7 @@
 import numpy as np
 
 from uav import UAV, uav_param
+from observer import neso
 from collector import data_collector
 from FNTSMC import fntsmc_att, fntsmc_pos, fntsmc_param
 from ref_cmd import *
@@ -22,6 +23,17 @@ class uav_pos_ctrl(UAV):
         self.dot_att_ref = np.zeros(3)
 
         self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)  # 最大角速度不能超过 60 度 / 秒
+
+        self.observer = neso(l1=np.array([3., 3., 3.]),
+                             l2=np.array([3., 3., 3.]),
+                             l3=np.array([1., 1., 3.]),
+                             r=np.array([20., 20., 20.]),
+                             k1=np.array([0.7, 0.7, 0.7]),
+                             k2=np.array([0.001, 0.001, 0.001]),
+                             dim=3,
+                             dt=self.dt)
+        syst_dynamic_out = -self.kt / self.m * self.dot_eta() + self.A()
+        self.observer.set_init(x0=self.eta(), dx0=self.dot_eta(), syst_dynamic=syst_dynamic_out)
 
         self.obs = np.zeros(3)  # output of the observer
         self.dis = np.zeros(3)  # external disturbance, known by me, but not the controller
@@ -225,12 +237,18 @@ class uav_pos_ctrl(UAV):
         """
         return np.random.uniform(low=pos0 - np.fabs(r), high=pos0 + np.fabs(r), size=3)
 
-    def generate_action_4_uav(self):
+    def generate_action_4_uav(self, use_observer: bool = False, is_ideal: bool = True):
         ref, dot_ref, dot2_ref, _ = ref_uav(self.time, self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
-        uncertainty = generate_uncertainty(time=self.time, is_ideal=True)
-        obs = np.zeros(3)
+        if is_ideal:
+            use_observer = False
+        self.dis = generate_uncertainty(time=self.time, is_ideal=is_ideal)
+        if use_observer:
+            syst_dynamic = -self.kt / self.m * self.dot_eta() + self.A()
+            self.obs, _ = self.observer.observe(x=self.eta(), syst_dynamic=syst_dynamic)
+        else:
+            self.obs = np.zeros(3)
 
-        phi_d, theta_d, throttle = self.pos_control(ref[0:3], dot_ref[0:3], dot2_ref[0:3], uncertainty, obs)
+        phi_d, theta_d, throttle = self.pos_control(ref[0:3], dot_ref[0:3], dot2_ref[0:3], self.dis, self.obs)
         dot_phi_d = (phi_d - self.att_ref[0]) / self.dt
         dot_theta_d = (theta_d - self.att_ref[1]) / self.dt
 

@@ -69,6 +69,12 @@ class PPOActor_Gaussian(nn.Module):
         # dist = Normal(mean, std)
         return dist
 
+    def evaluate(self, state):
+        with torch.no_grad():
+            t_state = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0)
+            action_mean = self.forward(t_state)
+        return action_mean.detach().cpu().numpy().flatten()
+
 
 class PPOCritic(nn.Module):
     def __init__(self, state_dim=3, use_orthogonal_init: bool = True):

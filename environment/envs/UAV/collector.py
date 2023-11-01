@@ -256,7 +256,7 @@ class data_collector:
         plt.figure()
         plt.subplot(1, 3, 1)
         plt.plot(self.t, self.d_out[:, 0], 'red')
-        plt.plot(self.t, self.d_out[:, 0], 'blue')
+        plt.plot(self.t, self.d_out_obs[:, 0], 'blue')
         plt.grid(True)
         plt.xlabel('time(s)')
         plt.ylim((-4, 4))
@@ -264,7 +264,7 @@ class data_collector:
 
         plt.subplot(1, 3, 2)
         plt.plot(self.t, self.d_out[:, 1], 'red')
-        plt.plot(self.t, self.d_out[:, 1], 'blue')
+        plt.plot(self.t, self.d_out_obs[:, 1], 'blue')
         plt.grid(True)
         plt.xlabel('time(s)')
         plt.ylim((-4, 4))
@@ -272,7 +272,7 @@ class data_collector:
 
         plt.subplot(1, 3, 3)
         plt.plot(self.t, self.d_out[:, 2], 'red')
-        plt.plot(self.t, self.d_out[:, 2], 'blue')
+        plt.plot(self.t, self.d_out_obs[:, 2], 'blue')
         plt.grid(True)
         plt.xlabel('time(s)')
         plt.ylim((-4, 4))
