@@ -306,6 +306,10 @@ class uav_pos_ctrl(UAV):
         else:
             self.pos_ctrl.fntsmc_pos_reset()
 
+        '''5. reset observer'''
+        syst_dynamic_out = -self.kt / self.m * self.dot_eta() + self.A()
+        self.observer.set_init(x0=self.eta(), dx0=self.dot_eta(), syst_dynamic=syst_dynamic_out)
+
         '''5. reset iamge'''
         self.draw_3d_trajectory_projection(self.trajectory)
         self.draw_init_image()

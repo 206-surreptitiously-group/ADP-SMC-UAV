@@ -15,13 +15,12 @@ from environment.envs.UAV.uav_pos_ctrl_RL import uav_pos_ctrl_RL, uav_param
 from environment.envs.UAV.uav_att_ctrl_RL import uav_att_ctrl_RL
 from environment.envs.UAV.FNTSMC import fntsmc_param
 from environment.Color import Color
-from algorithm.policy_base.Proximal_Policy_Optimization import Proximal_Policy_Optimization as PPO
-from algorithm.policy_base.Proximal_Policy_Optimization import PPOActor_Gaussian, PPOCritic
+from algorithm.policy_base.Proximal_Policy_Optimization import PPOActor_Gaussian
 from common.common_cls import *
 from common.common_func import *
 
 '''Parameter list of the quadrotor'''
-DT = 0.02
+DT = 0.01
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8
@@ -174,18 +173,19 @@ if __name__ == '__main__':
     ref_trajectory = pd.read_csv(curPath + '/systemic_mesh.csv', header=0).to_numpy()
     print(ref_trajectory.shape)
     cnt = 0
-    # CONTROLLER = 'RL'
     CONTROLLER = 'fntsmc'
+
     r = []
     att_out = []
     pos_out = []
 
     for _traj in ref_trajectory:
-        if cnt % 100 == 0:
-            print('index: ', cnt)
+        # if cnt % 100 == 0:
+        #     print('index: ', cnt)
         A = _traj[0: 4]
         T = _traj[4: 8]
         phi0 = _traj[8: 12]
+
         env_pos.reset_uav_pos_ctrl_RL_tracking(random_trajectroy=False,
                                                random_pos0=False,
                                                new_att_ctrl_param=None,
@@ -204,7 +204,7 @@ if __name__ == '__main__':
                 att_s = np.concatenate((e_att, e_dot_att))
                 parma_att = opt_att.evaluate(att_norm(att_s))   # new attitude control parameter
 
-                env_pos.get_param_from_actor(param_pos)
+                env_pos.get_param_from_actor(param_pos, update_k2=False)
                 env_pos.set_att_ctrl_from_outer(parma_att * a_att_cof)
 
             DRAW = False
@@ -214,20 +214,17 @@ if __name__ == '__main__':
                 env_pos.draw_time_error(env_pos.uav_pos(), env_pos.pos_ref)
                 env_pos.show_image(False)
 
-            a_4_uav = env_pos.generate_action_4_uav()
+            a_4_uav = env_pos.generate_action_4_uav(use_observer=True, is_ideal=False)
             env_pos.step_update(a_4_uav)
             test_r += env_pos.reward
 
+        test_r *= DT
+        print('Index: %.0f | Reward: %.2f' % (cnt, test_r))
         r.append(test_r)
         att_out.append(1 if env_pos.terminal_flag == 3 else 0)
         pos_out.append(1 if env_pos.terminal_flag == 2 else 0)
         cnt += 1
-        # if cnt > 20:
-        #     break
-    if CONTROLLER == 'RL':
-        (pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).
-         to_csv('./systemic_mesh_result_rl.csv', sep=',', index=False))
-    else:
-        (pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).
-         to_csv('./systemic_mesh_result_smc.csv', sep=',', index=False))
+
+    filename = './systemic_mesh_result_fntsmc_obs.csv'
+    pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).to_csv(filename, sep=',', index=False)
     print('Finish simulation. | Pos_out: %.0f | Att_out: %.0f' % (np.sum(pos_out), np.sum(att_out)))

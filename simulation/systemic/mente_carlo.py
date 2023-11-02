@@ -21,7 +21,7 @@ from common.common_cls import *
 from common.common_func import *
 
 '''Parameter list of the quadrotor'''
-DT = 0.001
+DT = 0.01
 uav_param = uav_param()
 uav_param.m = 0.8
 uav_param.g = 9.8
@@ -175,10 +175,10 @@ if __name__ == '__main__':
     r = []
     att_out = []
     pos_out = []
-    TEST_NUM = 1
+    TEST_NUM = 2
 
     for i in range(TEST_NUM):
-        writer = cv.VideoWriter(curPath+'/record%.0f.mp4' % (cnt), cv.VideoWriter_fourcc(*'mp4v'), 250, (env_pos.width, env_pos.height))
+        # writer = cv.VideoWriter(curPath+'/record%.0f.mp4' % (cnt), cv.VideoWriter_fourcc(*'mp4v'), 250, (env_pos.width, env_pos.height))
         if cnt % 100 == 0:
             print('index: ', cnt)
         # A = np.random.uniform(0, 1, 4) * np.array([1.5, 1.5, 1.5, np.pi / 2])
@@ -212,24 +212,24 @@ if __name__ == '__main__':
                 env_pos.get_param_from_actor(param_pos, update_k2=False)     # update position control parameter
                 env_pos.set_att_ctrl_from_outer(parma_att * a_att_cof)      # update attitude control parameter
 
-            DRAW = False
+            DRAW = True
             if DRAW:
                 env_pos.image = env_pos.image_copy.copy()
                 env_pos.draw_3d_points_projection(np.atleast_2d([env_pos.uav_pos(), env_pos.pos_ref]), [Color().Red, Color().DarkGreen])
                 env_pos.draw_time_error(env_pos.uav_pos(), env_pos.pos_ref)
                 env_pos.show_image(False)
 
-            RECORD = False
-            if RECORD:
-                env_pos.image = env_pos.image_copy.copy()
-                env_pos.draw_3d_points_projection(np.atleast_2d([env_pos.uav_pos(), env_pos.pos_ref]), [Color().Red, Color().DarkGreen])
-                env_pos.draw_time_error(env_pos.uav_pos(), env_pos.pos_ref)
-                writer.write(env_pos.image)
+            # RECORD = False
+            # if RECORD:
+            #     env_pos.image = env_pos.image_copy.copy()
+            #     env_pos.draw_3d_points_projection(np.atleast_2d([env_pos.uav_pos(), env_pos.pos_ref]), [Color().Red, Color().DarkGreen])
+            #     env_pos.draw_time_error(env_pos.uav_pos(), env_pos.pos_ref)
+            #     # writer.write(env_pos.image)
 
             a_4_uav = env_pos.generate_action_4_uav(use_observer=True, is_ideal=False)
             env_pos.step_update(a_4_uav)
             test_r += env_pos.reward
-        writer.release()
+        # writer.release()
         test_r *= DT
         r.append(test_r)
         print(test_r)
