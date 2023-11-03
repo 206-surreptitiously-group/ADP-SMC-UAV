@@ -24,10 +24,10 @@ class uav_pos_ctrl(UAV):
 
         self.dot_att_ref_limit = 60. * np.pi / 180. * np.ones(3)  # 最大角速度不能超过 60 度 / 秒
 
-        self.observer = neso(l1=np.array([3., 3., 3.]),
-                             l2=np.array([3., 3., 3.]),
-                             l3=np.array([1., 1., 3.]),
-                             r=np.array([20., 20., 20.]),
+        self.observer = neso(l1=np.array([2., 2., 6.]),
+                             l2=np.array([2., 2., 3.]),
+                             l3=np.array([0.8, 0.8, 3.]),
+                             r=np.array([30., 20., 15.]),
                              k1=np.array([0.7, 0.7, 0.7]),
                              k2=np.array([0.001, 0.001, 0.001]),
                              dim=3,
@@ -237,7 +237,7 @@ class uav_pos_ctrl(UAV):
         """
         return np.random.uniform(low=pos0 - np.fabs(r), high=pos0 + np.fabs(r), size=3)
 
-    def generate_action_4_uav(self, use_observer: bool = False, is_ideal: bool = True):
+    def generate_action_4_uav(self, use_observer: bool = False, is_ideal: bool = True, att_limit: bool = True):
         ref, dot_ref, dot2_ref, _ = ref_uav(self.time, self.ref_amplitude, self.ref_period, self.ref_bias_a, self.ref_bias_phase)
         if is_ideal:
             use_observer = False
@@ -256,8 +256,9 @@ class uav_pos_ctrl(UAV):
         dot_rho_d = np.array([dot_phi_d, dot_theta_d, dot_ref[3]])
 
         '''期望角速度限制'''
-        dot_rho_d = np.clip(dot_rho_d, -self.dot_att_ref_limit, self.dot_att_ref_limit)
-        rho_d += dot_rho_d * self.dt
+        if att_limit:
+            dot_rho_d = np.clip(dot_rho_d, -self.dot_att_ref_limit, self.dot_att_ref_limit)
+            rho_d += dot_rho_d * self.dt
         '''期望角速度限制'''
 
         torque = self.att_control(rho_d, dot_rho_d, np.zeros(3), att_only=False)

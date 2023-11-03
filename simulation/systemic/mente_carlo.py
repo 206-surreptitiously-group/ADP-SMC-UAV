@@ -175,7 +175,7 @@ if __name__ == '__main__':
     r = []
     att_out = []
     pos_out = []
-    TEST_NUM = 2
+    TEST_NUM = 1
 
     for i in range(TEST_NUM):
         # writer = cv.VideoWriter(curPath+'/record%.0f.mp4' % (cnt), cv.VideoWriter_fourcc(*'mp4v'), 250, (env_pos.width, env_pos.height))
@@ -195,6 +195,8 @@ if __name__ == '__main__':
                                                new_pos_ctrl_parma=pos_ctrl_param,
                                                outer_param=[A, T, phi0])
         test_r = 0.
+        opt_param_pos = np.zeros((1, opt_pos.action_dim))
+        opt_param_att = np.zeros((1, opt_att.action_dim))
         while not env_pos.is_terminal:
             CONTROLLER = 'RL'
             # CONTROLLER = 'fntsmc'
@@ -212,7 +214,10 @@ if __name__ == '__main__':
                 env_pos.get_param_from_actor(param_pos, update_k2=False)     # update position control parameter
                 env_pos.set_att_ctrl_from_outer(parma_att * a_att_cof)      # update attitude control parameter
 
-            DRAW = True
+                opt_param_pos = np.insert(opt_param_pos, opt_param_pos.shape[0], param_pos, axis=0)
+                opt_param_att = np.insert(opt_param_att, opt_param_att.shape[0], parma_att * a_att_cof, axis=0)
+
+            DRAW = False
             if DRAW:
                 env_pos.image = env_pos.image_copy.copy()
                 env_pos.draw_3d_points_projection(np.atleast_2d([env_pos.uav_pos(), env_pos.pos_ref]), [Color().Red, Color().DarkGreen])
@@ -226,7 +231,7 @@ if __name__ == '__main__':
             #     env_pos.draw_time_error(env_pos.uav_pos(), env_pos.pos_ref)
             #     # writer.write(env_pos.image)
 
-            a_4_uav = env_pos.generate_action_4_uav(use_observer=True, is_ideal=False)
+            a_4_uav = env_pos.generate_action_4_uav(use_observer=True, is_ideal=False, att_limit=False)
             env_pos.step_update(a_4_uav)
             test_r += env_pos.reward
         # writer.release()
@@ -237,9 +242,18 @@ if __name__ == '__main__':
         pos_out.append(1 if env_pos.terminal_flag == 2 else 0)
         cnt += 1
 
+        env_pos.collector.package2file(path=curPath + '/')
         env_pos.collector.plot_outer_obs()
         env_pos.collector.plot_pos()
         plt.show()
+
+        opt_param_pos = np.delete(opt_param_pos, 0, axis=0)
+        opt_param_att = np.delete(opt_param_att, 0, axis=0)
+        print(opt_param_pos.shape, opt_param_att.shape)
+        pd.DataFrame(opt_param_pos, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda'])\
+            .to_csv(curPath + '/opt_param_pos.csv', sep=',', index=False)
+        pd.DataFrame(opt_param_att, columns=['k11', 'k12', 'k13', 'k21', 'k22', 'k23', 'gamma', 'lambda']) \
+            .to_csv(curPath + '/opt_param_att.csv', sep=',', index=False)
 
     # if CONTROLLER == 'RL':
     #     (pd.DataFrame({'r': r, 'att_out': att_out, 'pos_out': pos_out}).

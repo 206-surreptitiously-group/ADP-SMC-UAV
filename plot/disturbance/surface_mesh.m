@@ -1,11 +1,11 @@
 clc;clear;
 
 %% load file
-xy = csvread('./systemic_mesh.csv', 1, 0);
-smc_no = csvread('./systemic_mesh_result_fntsmc_noobs.csv', 1, 0);
-smc_o = csvread('./systemic_mesh_result_fntsmc_obs.csv', 1, 0);
-rl_no = csvread('./systemic_mesh_result_rl_noobs.csv', 1, 0);
-rl_o = csvread('./systemic_mesh_result_rl_obs.csv', 1, 0);
+xy = csvread('./surface_mesh/systemic_mesh.csv', 1, 0);
+smc_no = csvread('./surface_mesh/systemic_mesh_result_fntsmc_noobs.csv', 1, 0);
+smc_o = csvread('./surface_mesh/systemic_mesh_result_fntsmc_obs.csv', 1, 0);
+rl_no = csvread('./surface_mesh/systemic_mesh_result_rl_noobs.csv', 1, 0);
+rl_o = csvread('./surface_mesh/systemic_mesh_result_rl_obs.csv', 1, 0);
 
 fx = xy(:, 1);
 fy = xy(:, 5);
